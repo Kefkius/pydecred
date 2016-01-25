@@ -1,0 +1,6 @@
+*.pyc
+*.swp
+
+build/
+dist/
+pydecred.egg-info/
