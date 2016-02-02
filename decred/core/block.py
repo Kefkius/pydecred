@@ -1,9 +1,9 @@
 import struct
 
 from bitcoin.core import b2x, b2lx
-from bitcoin.core.serialize import ser_read, ImmutableSerializable
+from bitcoin.core.serialize import ser_read, Serializable
 
-class BlockHeader(ImmutableSerializable):
+class BlockHeader(Serializable):
     """A Decred block header."""
     __slots__ = ['version', 'prev_block', 'merkle_root', 'stake_root',
                  'vote_bits', 'final_state', 'voters', 'fresh_stake',

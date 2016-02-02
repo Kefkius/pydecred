@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import struct
 
-from bitcoin.core.serialize import (ser_read, Serializable, ImmutableSerializable, BytesSerializer,
+from bitcoin.core.serialize import (ser_read, Serializable, BytesSerializer,
         VectorSerializer, VarIntSerializer)
 
 TX_SERIALIZE_FULL = 0
@@ -11,7 +11,7 @@ TX_SERIALIZE_WITNESS_SIGNING = 3
 TX_SERIALIZE_WITNESS_VALUE_SIGNING = 4
 
 
-class OutPoint(ImmutableSerializable):
+class OutPoint(Serializable):
     """A Decred previous transaction output."""
     __slots__ = ['hash', 'index', 'tree']
 
@@ -115,7 +115,7 @@ class TxIn(Serializable):
         f.write(struct.pack(b'<q', self.value))
         BytesSerializer.stream_serialize(self.sig_script, f)
 
-class TxOut(ImmutableSerializable):
+class TxOut(Serializable):
     """A Decred transaction output."""
     __slots__ = ['value', 'version', 'pk_script']
 
