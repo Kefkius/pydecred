@@ -31,11 +31,9 @@ class OutPoint(ImmutableSerializable):
 
 class TxIn(ImmutableSerializable):
     """A Decred transaction input."""
-    __slots__ = ['prev_out', 'sequence', 'value', 'block_height',
-                 'block_index', 'sig_script']
+    __slots__ = ['prev_out', 'sequence', 'value', 'block_height', 'block_index', 'sig_script']
 
-    def __init__(self, prev_out=OutPoint(), sequence=0, value=0,
-                 block_height=0, block_index=0, sig_script=b'\x00'):
+    def __init__(self, prev_out=OutPoint(), sequence=0, value=0, block_height=0, block_index=0, sig_script=b''):
         # Non-witness.
         object.__setattr__(self, 'prev_out', prev_out)
         object.__setattr__(self, 'sequence', sequence)
@@ -51,8 +49,8 @@ class TxIn(ImmutableSerializable):
         sequence = struct.unpack(b'<I', ser_read(f, 4))[0]
 
         value = struct.unpack(b'<q', ser_read(f, 8))[0]
-        block_height = struct.unpack(b'<I', read_read(f, 4))[0]
-        block_index = struct.unpack(b'<I', read_read(f, 4))[0]
+        block_height = struct.unpack(b'<I', ser_read(f, 4))[0]
+        block_index = struct.unpack(b'<I', ser_read(f, 4))[0]
         sig_script = BytesSerializer.stream_deserialize(f)
         return cls(prev_out, sequence, value, block_height, block_index, sig_script)
 
@@ -81,9 +79,9 @@ class TxOut(ImmutableSerializable):
         pk_script = BytesSerializer.stream_deserialize(f)
         return cls(value, version, pk_script)
 
-    def stream_serialize(self, f)
+    def stream_serialize(self, f):
         f.write(struct.pack(b'<q', self.value))
-        f.write(struct.pack(b<'H', self.version))
+        f.write(struct.pack(b'<H', self.version))
         BytesSerializer.stream_serialize(self.pk_script, f)
 
 class Transaction(ImmutableSerializable):
