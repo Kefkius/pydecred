@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import struct
+from io import BytesIO
 
 from bitcoin.core.serialize import (ser_read, Serializable, BytesSerializer,
         VectorSerializer, VarIntSerializer)
@@ -10,6 +11,14 @@ TX_SERIALIZE_ONLY_WITNESS = 2
 TX_SERIALIZE_WITNESS_SIGNING = 3
 TX_SERIALIZE_WITNESS_VALUE_SIGNING = 4
 
+def tx_version_to_vars(version):
+    """Converts an int32 representation into serialization type and version."""
+    f = BytesIO()
+    f.write(struct.pack(b'<I', version))
+    f.seek(0)
+    version_value = struct.unpack(b'<H', ser_read(f, 2))[0]
+    serialization_type = struct.unpack(b'<H', ser_read(f, 2))[0]
+    return (version_value, serialization_type)
 
 class OutPoint(Serializable):
     """A Decred previous transaction output."""
@@ -151,16 +160,17 @@ class Transaction(Serializable):
     def stream_deserialize(cls, f):
         self = cls()
         self.version = struct.unpack(b'<i', ser_read(f, 4))[0]
+        _, ser_type = tx_version_to_vars(self.version)
 
-        if self.version == TX_SERIALIZE_NO_WITNESS:
+        if ser_type == TX_SERIALIZE_NO_WITNESS:
             self.deserialize_prefix(f)
-        elif self.version == TX_SERIALIZE_ONLY_WITNESS:
+        elif ser_type == TX_SERIALIZE_ONLY_WITNESS:
             self.deserialize_witness(f, False)
-        elif self.version == TX_SERIALIZE_WITNESS_SIGNING:
+        elif ser_type == TX_SERIALIZE_WITNESS_SIGNING:
             self.deserialize_witness_signing(f)
-        elif self.version == TX_SERIALIZE_WITNESS_VALUE_SIGNING:
+        elif ser_type == TX_SERIALIZE_WITNESS_VALUE_SIGNING:
             self.deserialize_witness_value_signing(f)
-        elif self.version == TX_SERIALIZE_FULL:
+        elif ser_type == TX_SERIALIZE_FULL:
             self.deserialize_prefix(f)
             self.deserialize_witness(f, True)
         else:
@@ -227,16 +237,17 @@ class Transaction(Serializable):
 
     def stream_serialize(self, f):
         f.write(struct.pack(b'<i', self.version))
+        _, ser_type = tx_version_to_vars(self.version)
 
-        if self.version == TX_SERIALIZE_NO_WITNESS:
+        if ser_type == TX_SERIALIZE_NO_WITNESS:
             self.serialize_prefix(f)
-        elif self.version == TX_SERIALIZE_ONLY_WITNESS:
+        elif ser_type == TX_SERIALIZE_ONLY_WITNESS:
             self.serialize_witness(f)
-        elif self.version == TX_SERIALIZE_WITNESS_SIGNING:
+        elif ser_type == TX_SERIALIZE_WITNESS_SIGNING:
             self.serialize_witness_signing(f)
-        elif self.version == TX_SERIALIZE_WITNESS_VALUE_SIGNING:
+        elif ser_type == TX_SERIALIZE_WITNESS_VALUE_SIGNING:
             self.serialize_witness_value_signing(f)
-        elif self.version == TX_SERIALIZE_FULL:
+        elif ser_type == TX_SERIALIZE_FULL:
             self.serialize_prefix(f)
             self.serialize_witness(f)
         else:
