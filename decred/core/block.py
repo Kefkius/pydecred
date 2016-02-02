@@ -1,7 +1,10 @@
+from __future__ import absolute_import
 import struct
 
 from bitcoin.core import b2x, b2lx
 from bitcoin.core.serialize import ser_read, Serializable
+
+from .serialize import DecredHash
 
 class BlockHeader(Serializable):
     """A Decred block header."""
@@ -27,6 +30,9 @@ class BlockHeader(Serializable):
                 size, timestamp, nonce, extra_data,)
         for attr_name, argument in zip(BlockHeader.__slots__, args):
             object.__setattr__(self, attr_name, argument)
+
+    def GetHash(self):
+        return DecredHash(self.serialize())
 
     @classmethod
     def stream_deserialize(cls, f):

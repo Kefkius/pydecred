@@ -28,3 +28,4 @@ class BlockHeaderTest(unittest.TestCase):
         self.assertEqual('000000000000000000000000000000000000000000000000000000000000000000000000', b2x(header.extra_data))
 
         self.assertEqual(raw_header, header.serialize())
+        self.assertEqual('df03ea8cb4a6f201c3e726f2f922a9249b39129bb59fa593ceb172e0f7c14d6e', b2lx(header.GetHash()))

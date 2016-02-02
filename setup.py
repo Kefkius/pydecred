@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 import os
 
 version = '0.1a'
-requires = ['python-bitcoinlib']
+requires = ['decred_hash', 'python-bitcoinlib']
 
 setup(
     name='pydecred',
