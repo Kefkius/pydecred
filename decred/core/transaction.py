@@ -32,6 +32,10 @@ class OutPoint(Serializable):
         object.__setattr__(self, 'tree', tree)
 
     @classmethod
+    def from_outpoint(cls, outpoint):
+        return cls(outpoint.hash, outpoint.index, outpoint.tree)
+
+    @classmethod
     def stream_deserialize(cls, f):
         hash = ser_read(f, 32)
         index = struct.unpack(b'<I', ser_read(f, 4))[0]
@@ -57,6 +61,10 @@ class TxIn(Serializable):
         object.__setattr__(self, 'block_height', block_height)
         object.__setattr__(self, 'block_index', block_index)
         object.__setattr__(self, 'sig_script', sig_script)
+
+    @classmethod
+    def from_txin(cls, txin):
+        return cls(OutPoint.from_outpoint(txin.prev_out), txin.sequence, txin.value, txin.block_height, txin.block_index, txin.sig_script)
 
     @classmethod
     def stream_deserialize(cls, f):
@@ -134,6 +142,10 @@ class TxOut(Serializable):
         object.__setattr__(self, 'pk_script', pk_script)
 
     @classmethod
+    def from_txout(cls, txout):
+        return cls(txout.value, txout.version, txout.pk_script)
+
+    @classmethod
     def stream_deserialize(cls, f):
         value = struct.unpack(b'<q', ser_read(f, 8))[0]
         version = struct.unpack(b'<H', ser_read(f, 2))[0]
@@ -151,10 +163,14 @@ class Transaction(Serializable):
 
     def __init__(self, version=0, txins=(), txouts=(), locktime=0, expiry=0):
         object.__setattr__(self, 'version', version)
-        object.__setattr__(self, 'txins', txins)
-        object.__setattr__(self, 'txouts', txouts)
+        object.__setattr__(self, 'txins', tuple(TxIn.from_txin(txin) for txin in txins))
+        object.__setattr__(self, 'txouts', tuple(TxOut.from_txout(txout) for txout in txouts))
         object.__setattr__(self, 'locktime', locktime)
         object.__setattr__(self, 'expiry', expiry)
+
+    @classmethod
+    def from_tx(cls, tx):
+        return cls(tx.version, tx.txins, tx.txouts, tx.locktime, tx.expiry)
 
     @classmethod
     def stream_deserialize(cls, f):
