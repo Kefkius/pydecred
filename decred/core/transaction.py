@@ -163,8 +163,8 @@ class Transaction(Serializable):
 
     def __init__(self, version=0, txins=(), txouts=(), locktime=0, expiry=0):
         object.__setattr__(self, 'version', version)
-        object.__setattr__(self, 'txins', tuple(TxIn.from_txin(txin) for txin in txins))
-        object.__setattr__(self, 'txouts', tuple(TxOut.from_txout(txout) for txout in txouts))
+        object.__setattr__(self, 'txins', list(TxIn.from_txin(txin) for txin in txins))
+        object.__setattr__(self, 'txouts', list(TxOut.from_txout(txout) for txout in txouts))
         object.__setattr__(self, 'locktime', locktime)
         object.__setattr__(self, 'expiry', expiry)
 
@@ -207,8 +207,8 @@ class Transaction(Serializable):
         locktime = struct.unpack(b'<I', ser_read(f, 4))[0]
         expiry = struct.unpack(b'<I', ser_read(f, 4))[0]
 
-        self.txins = tuple(txins)
-        self.txouts = tuple(txouts)
+        self.txins = list(txins)
+        self.txouts = list(txouts)
         self.locktime = locktime
         self.expiry = expiry
 
@@ -225,7 +225,7 @@ class Transaction(Serializable):
                 txin = TxIn()
                 txin.deserialize_witness(f)
                 txins.append(txin)
-            self.txins = tuple(txins)
+            self.txins = list(txins)
         else:
             for i in range(txin_count):
                 txin = self.txins[i]
@@ -239,7 +239,7 @@ class Transaction(Serializable):
             txin = TxIn()
             txin.deserialize_witness_signing(f)
             txins.append(txin)
-        self.txins = tuple(txins)
+        self.txins = list(txins)
 
     def deserialize_witness_value_signing(self, f):
         """Deserialize a witness for signing with value."""
@@ -249,7 +249,7 @@ class Transaction(Serializable):
             txin = TxIn()
             txin.deserialize_witness_value_signing(f)
             txins.append(txin)
-        self.txins = tuple(txins)
+        self.txins = list(txins)
 
     def stream_serialize(self, f):
         f.write(struct.pack(b'<i', self.version))

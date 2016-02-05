@@ -97,8 +97,8 @@ class Block(BlockHeader):
                 voters, fresh_stake, revocations, pool_size, bits, sbits, height,
                 size, timestamp, nonce, extra_data,)
         super(Block, self).__init__(*args)
-        self.txs = txs
-        self.stxs = stxs
+        self.txs = list(txs)
+        self.stxs = list(stxs)
 
     @classmethod
     def stream_deserialize(cls, f):
@@ -106,8 +106,8 @@ class Block(BlockHeader):
         txs = VectorSerializer.stream_deserialize(Transaction, f)
         stxs = VectorSerializer.stream_deserialize(Transaction, f)
 
-        self.txs = txs
-        self.stxs = stxs
+        self.txs = list(txs)
+        self.stxs = list(stxs)
         return self
 
     def stream_serialize(self, f):
