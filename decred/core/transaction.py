@@ -2,6 +2,7 @@ from __future__ import absolute_import
 import struct
 from io import BytesIO
 
+from bitcoin.core import b2lx, b2x
 from bitcoin.core.serialize import (ser_read, Serializable, BytesSerializer,
         VectorSerializer, VarIntSerializer)
 
@@ -30,6 +31,9 @@ class OutPoint(Serializable):
         object.__setattr__(self, 'hash', hash)
         object.__setattr__(self, 'index', index)
         object.__setattr__(self, 'tree', tree)
+
+    def __repr__(self):
+        return 'OutPoint(hash=lx(%r), index=%d, tree=%d)' % (b2lx(self.hash), self.index, self.tree)
 
     @classmethod
     def from_outpoint(cls, outpoint):
@@ -61,6 +65,10 @@ class TxIn(Serializable):
         object.__setattr__(self, 'block_height', block_height)
         object.__setattr__(self, 'block_index', block_index)
         object.__setattr__(self, 'sig_script', sig_script)
+
+    def __repr__(self):
+        return 'TxIn(prev_out=%s, sequence=0x%x, value=%d, block_height=%d, block_index=%d, sig_script=x("%s"))' % (repr(self.prev_out),
+                self.sequence, self.value, self.block_height, self.block_index, b2x(self.sig_script))
 
     @classmethod
     def from_txin(cls, txin):
@@ -141,6 +149,9 @@ class TxOut(Serializable):
         object.__setattr__(self, 'version', version)
         object.__setattr__(self, 'pk_script', pk_script)
 
+    def __repr__(self):
+        return 'TxOut(value=%d, version=%d, pk_script=x("%s"))' % (self.value, self.version, b2x(self.pk_script))
+
     @classmethod
     def from_txout(cls, txout):
         return cls(txout.value, txout.version, txout.pk_script)
@@ -167,6 +178,10 @@ class Transaction(Serializable):
         object.__setattr__(self, 'txouts', list(TxOut.from_txout(txout) for txout in txouts))
         object.__setattr__(self, 'locktime', locktime)
         object.__setattr__(self, 'expiry', expiry)
+
+    def __repr__(self):
+        return 'Transaction(version=%d, txins=%r, txouts=%r, locktime=%d, expiry=%d)' % (self.version,
+                self.txins, self.txouts, self.locktime, self.expiry)
 
     @classmethod
     def from_tx(cls, tx):
