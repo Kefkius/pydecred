@@ -2,9 +2,10 @@ from __future__ import absolute_import
 import struct
 
 from bitcoin.core import b2x, b2lx
-from bitcoin.core.serialize import ser_read, Serializable
+from bitcoin.core.serialize import ser_read, Serializable, VectorSerializer
 
 from .serialize import DecredHash
+from .transaction import Transaction
 
 class BlockHeader(Serializable):
     """A Decred block header."""
@@ -81,3 +82,48 @@ class BlockHeader(Serializable):
         assert len(self.extra_data) == 36
         f.write(self.extra_data)
 
+class Block(BlockHeader):
+    """A Decred block."""
+    __slots__ = ['txs', 'stxs']
+
+
+    def __init__(self, version=1, prev_block=b'\x00'*32, merkle_root=b'\x00'*32,
+                 stake_root=b'\x00'*32, vote_bits=0, final_state=b'\x00'*6, voters=0,
+                 fresh_stake=0, revocations=0, pool_size=0, bits=0, sbits=0,
+                 height=0, size=0, timestamp=0, nonce=0, extra_data=b'\x00'*36,
+                 txs=(), stxs=()):
+
+        args = (version, prev_block, merkle_root, stake_root, vote_bits, final_state,
+                voters, fresh_stake, revocations, pool_size, bits, sbits, height,
+                size, timestamp, nonce, extra_data,)
+        super(Block, self).__init__(*args)
+        self.txs = txs
+        self.stxs = stxs
+
+    @classmethod
+    def stream_deserialize(cls, f):
+        self = super(Block, cls).stream_deserialize(f)
+        txs = VectorSerializer.stream_deserialize(Transaction, f)
+        stxs = VectorSerializer.stream_deserialize(Transaction, f)
+
+        self.txs = txs
+        self.stxs = stxs
+        return self
+
+    def stream_serialize(self, f):
+        super(Block, self).stream_serialize(f)
+        VectorSerializer.stream_serialize(Transaction, self.txs, f)
+        VectorSerializer.stream_serialize(Transaction, self.stxs, f)
+
+    def get_header(self):
+        """Return the block header as a new object."""
+        args = ['version', 'prev_block', 'merkle_root', 'stake_root', 'vote_bits',
+                'final_state', 'voters', 'fresh_stake', 'revocations', 'pool_size',
+                'bits', 'sbits', 'height', 'size', 'timestamp', 'nonce', 'extra_data']
+        kwargs = {}
+        for i in args:
+            kwargs[i] = getattr(self, i)
+        return BlockHeader(**kwargs)
+
+    def GetHash(self):
+        return super(Block, self).GetHash()
