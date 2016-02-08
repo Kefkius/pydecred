@@ -67,7 +67,6 @@ class BlockHeaderTest(unittest.TestCase):
         txin = tx.txins[0]
         self.assertEqual(b'\x00' * 32, txin.prev_out.hash)
         self.assertEqual(0xffffffff, txin.prev_out.index)
-        # TODO: Verify dcrutil.TxTreeRegular = 0 when decred full source is released.
         self.assertEqual(0, txin.prev_out.tree)
         self.assertEqual(0xffffffff, txin.sequence)
         self.assertEqual(0x1616161616161616, txin.value)
@@ -97,7 +96,6 @@ class BlockHeaderTest(unittest.TestCase):
         txin = stx.txins[0]
         self.assertEqual(b'\x00' * 32, txin.prev_out.hash)
         self.assertEqual(0xffffffff, txin.prev_out.index)
-        # TODO: verify dcrutil.TxTreeStake = 1 when decred full source is released.
         self.assertEqual(1, txin.prev_out.tree)
         self.assertEqual(0xffffffff, txin.sequence)
         self.assertEqual(0x1313131313131313, txin.value)

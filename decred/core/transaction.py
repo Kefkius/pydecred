@@ -21,6 +21,15 @@ def tx_version_to_vars(version):
     serialization_type = struct.unpack(b'<H', ser_read(f, 2))[0]
     return (version_value, serialization_type)
 
+def vars_to_tx_version(version_value, serialization_type):
+    """Converts serialization type and tx version into a 32 bit int."""
+    f = BytesIO()
+    f.write(struct.pack(b'<H', version_value))
+    f.write(struct.pack(b'<H', serialization_type))
+    f.seek(0)
+    version = struct.unpack(b'<i', ser_read(f, 4))[0]
+    return version
+
 class OutPoint(Serializable):
     """A Decred previous transaction output."""
     __slots__ = ['hash', 'index', 'tree']

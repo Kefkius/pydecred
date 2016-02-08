@@ -1,4 +1,5 @@
 import unittest
+import struct
 
 from bitcoin.core import x, b2x, b2lx
 
@@ -38,3 +39,9 @@ class TransactionTest(unittest.TestCase):
 
         self.assertEqual(b2x(raw_tx), b2x(tx.serialize()))
 
+    def test_vars_to_tx_version(self):
+        def repr_version(int32):
+            return b2x(struct.pack(b'<i', int32))
+
+        self.assertEqual('01000000', repr_version(vars_to_tx_version(1, TX_SERIALIZE_FULL)))
+        self.assertEqual('01000100', repr_version(vars_to_tx_version(1, TX_SERIALIZE_NO_WITNESS)))
