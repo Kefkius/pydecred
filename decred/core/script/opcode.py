@@ -906,6 +906,8 @@ def opcodeReturn(op, vm):
     raise StackEarlyReturnError()
 
 # TODO
+def opcodeCheckLockTimeVerify(op, vm):
+    raise Exception('Not implemented')
 """
 // opcodeCheckLockTimeVerify compares the top item on the data stack to the
 // LockTime field of the transaction containing the script signature
@@ -1732,6 +1734,8 @@ def opcodeCodeSeparator(op, vm):
     vm.last_code_sep = vm.script_off
 
 # TODO
+def opcodeCheckSig(op, vm):
+    raise Exception('Not implemented')
 """
 // opcodeCheckSig treats the top 2 items on the stack as a public key and a
 // signature and replaces them with a bool which indicates if the signature was
@@ -1858,6 +1862,8 @@ type parsedSigInfo struct {
 }
 """
 
+def opcodeCheckMultiSig(op, vm):
+    raise Exception('Not implemented')
 """
 // opcodeCheckMultiSig treats the top item on the stack as an integer number of
 // public keys, followed by that many entries as raw data representing the public
@@ -2044,6 +2050,8 @@ def opcodeCheckMultiSigVerify(op, vm):
     opcodeVerify(op, vm)
 
 # TODO
+def opcodeCheckSigAlt(op, vm):
+    raise Exception('Not implemented')
 """
 // ECDSA signature schemes encoded as a single byte. Secp256k1 traditional
 // is non-accessible through CheckSigAlt, but is used elsewhere for in the
