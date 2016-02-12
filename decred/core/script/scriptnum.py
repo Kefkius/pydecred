@@ -1,6 +1,9 @@
+from __future__ import absolute_import
 import sys
 
 from bitcoin.core import _bignum
+
+from .errors import *
 
 _bord = ord
 if sys.version > '3':
@@ -14,16 +17,6 @@ min_int_32 = -1 << 31
 math_op_code_max_script_num_len = 4
 # Max number of bytes for the type of alternative signature suite.
 alt_sig_suites_max_script_num_len = 1
-
-
-class StackNumberTooBigError(Exception):
-    def __init__(self, *args, **kwargs):
-        super(StackNumberTooBigError, self).__init__('number is too big')
-
-class StackMinimalDataError(Exception):
-    """Data is not minimally-encoded."""
-    def __init__(self, *args, **kwargs):
-        super(StackMinimalDataError, self).__init__('non-minimally encoded script number')
 
 def check_minimal_data_encoding(val):
     """Returns whether or not the passed bytearray adheres to the

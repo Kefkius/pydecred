@@ -3,16 +3,7 @@ from __future__ import absolute_import
 from bitcoin.core.scripteval import _CastToBool
 
 from .scriptnum import num2bytearray, script_num, math_op_code_max_script_num_len
-
-class StackInvalidArgsError(Exception):
-    """An invalid argument was given."""
-    def __init__(self, *args, **kwargs):
-        super(StackInvalidArgsError, self).__init__('invalid argument')
-
-class StackUnderflowError(Exception):
-    """An opcode requires more items on the stack than are present."""
-    def __init__(self, *args, **kwargs):
-        super(StackUnderflowError, self).__init__('stack underflow')
+from .errors import *
 
 class Stack(object):
     def __init__(self, stack=None, verify_minimal_data=False):
