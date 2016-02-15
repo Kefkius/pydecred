@@ -1,74 +1,180 @@
 """Script-related errors."""
 
-class StackNumberTooBigError(Exception):
-    def __init__(self, *args, **kwargs):
-        super(StackNumberTooBigError, self).__init__('number is too big')
+# Engine execution errors.
 
-class StackMinimalDataError(Exception):
-    def __init__(self, *args, **kwargs):
-        super(StackMinimalDataError, self).__init__('non-minimally encoded script number')
+class EngineExecutionError(Exception):
+    pass
 
-class StackInvalidArgsError(Exception):
+class StackShortScriptError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(StackInvalidArgsError, self).__init__('invalid argument')
+        EngineExecutionError.__init__(self, 'execute past end of script')
 
-class StackUnderflowError(Exception):
+class StackLongScriptError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(StackUnderflowError, self).__init__('stack underflow')
+        EngineExecutionError.__init__(self, 'script is longer than maximum allowed')
 
-class StackInvalidOpcodeError(Exception):
+class StackUnderflowError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(StackInvalidOpcodeError, self).__init__('Invalid Opcode')
+        EngineExecutionError.__init__(self, 'stack underflow')
 
-class StackOpDisabledError(Exception):
+class StackInvalidArgsError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(StackOpDisabledError, self).__init__('Disabled Opcode')
+        EngineExecutionError.__init__(self, 'invalid argument')
 
-class StackReservedOpcodeError(Exception):
+class StackOpDisabledError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(StackReservedOpcodeError, self).__init__('Reserved Opcode')
+        EngineExecutionError.__init__(self, 'Disabled Opcode')
 
-class StackNoIfError(Exception):
+class StackVerifyFailedError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(StackNoIfError, self).__init__('OP_ELSE or OP_ENDIF with no matching OP_IF')
+        EngineExecutionError.__init__(self, 'Verify failed')
 
-class StackVerifyFailedError(Exception):
+class StackNumberTooBigError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(StackVerifyFailedError, self).__init__('Verify failed')
+        EngineExecutionError.__init__(self, 'number too big')
 
-class StackEarlyReturnError(Exception):
+class StackInvalidOpcodeError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(StackEarlyReturnError, self).__init__('Script returned early')
+        EngineExecutionError.__init__(self, 'Invalid Opcode')
 
-class StackElementTooBigError(Exception):
+class StackReservedOpcodeError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(StackElementTooBigError, self).__init__('Element in script too large')
+        EngineExecutionError.__init__(self, 'Reserved Opcode')
 
-class SubstrIdxOutOfBoundsError(Exception):
+class StackEarlyReturnError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(SubstrIdxOutOfBoundsError, self).__init__('Out of bounds number given for substring index')
+        EngineExecutionError.__init__(self, 'Script returned early')
 
-class SubstrIdxNegativeError(Exception):
+class StackNoIfError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(SubstrIdxNegativeError, self).__init__('Negative number given for substring index')
+        EngineExecutionError.__init__(self, 'OP_ELSE or OP_ENDIF with no matching OP_IF')
 
-class NegativeRotationError(Exception):
+class StackMissingEndifError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(NegativeRotationError, self).__init__('Rotation depth negative')
+        EngineExecutionError.__init__(self, 'execute fail, in conditional execution')
 
-class RotationOverflowError(Exception):
+class StackTooManyPubkeysError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(RotationOverflowError, self).__init__('Rotation depth out of bounds')
+        EngineExecutionError.__init__(self, 'Invalid pubkey count in OP_CHECKMULTISIG')
 
-class DivideByZeroError(Exception):
+class StackTooManyOperationsError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(DivideByZeroError, self).__init__('Division by zero')
+        EngineExecutionError.__init__(self, 'Too many operations in script')
 
-class NegativeShiftError(Exception):
+class StackElementTooBigError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(NegativeShiftError, self).__init__('Shift depth negative')
+        EngineExecutionError.__init__(self, 'Element in script too large')
 
-class ShiftOverflowError(Exception):
+class StackUnknownAddressError(EngineExecutionError):
     def __init__(self, *args, **kwargs):
-        super(ShiftOverflowError, self).__init__('Shift depth out of bounds')
+        EngineExecutionError.__init__(self, 'non-recognised address')
+
+class StackScriptFailedError(EngineExecutionError):
+    def __init__(self, *args, **kwargs):
+        EngineExecutionError.__init__(self, 'execute fail, fail on stack')
+
+class StackScriptUnfinishedError(EngineExecutionError):
+    def __init__(self, *args, **kwargs):
+        EngineExecutionError.__init__(self, 'Error check when script unfinished')
+
+class StackEmptyStackError(EngineExecutionError):
+    def __init__(self, *args, **kwargs):
+        EngineExecutionError.__init__(self, 'Stack empty at end of execution')
+
+class StackP2SHNonPushOnlyError(EngineExecutionError):
+    def __init__(self, *args, **kwargs):
+        EngineExecutionError.__init__(self, 'pay to script hash with non-pushonly input')
+
+class StackInvalidParseTypeError(EngineExecutionError):
+    def __init__(self, *args, **kwargs):
+        EngineExecutionError.__init__(self, 'internal error: invalid parsetype found')
+
+class StackInvalidAddrOffsetError(EngineExecutionError):
+    def __init__(self, *args, **kwargs):
+        EngineExecutionError.__init__(self, 'internal error: invalid offset found')
+
+class StackInvalidIndexError(EngineExecutionError):
+    def __init__(self, *args, **kwargs):
+        EngineExecutionError.__init__(self, 'Invalid script index')
+
+class StackNonPushOnlyError(EngineExecutionError):
+    def __init__(self, *args, **kwargs):
+        EngineExecutionError.__init__(self, 'SigScript is non-pushonly')
+
+class StackOverflowError(EngineExecutionError):
+    def __init__(self, *args, **kwargs):
+        EngineExecutionError.__init__(self, 'Stacks overflowed')
+
+class StackInvalidLowSSignatureError(EngineExecutionError):
+    def __init__(self, *args, **kwargs):
+        EngineExecutionError.__init__(self, 'invalid low s signature')
+
+class StackInvalidPubKeyError(EngineExecutionError):
+    def __init__(self, *args, **kwargs):
+        EngineExecutionError.__init__(self, 'invalid strict pubkey')
+
+class StackCleanStackError(EngineExecutionError):
+    def __init__(self, *args, **kwargs):
+        EngineExecutionError.__init__(self, 'stack is not clean')
+
+class StackMinimalDataError(EngineExecutionError):
+    def __init__(self, *args, **kwargs):
+        EngineExecutionError.__init__(self, 'non-minimally encoded script number')
+
+
+# Engine script errors.
+class EngineScriptError(Exception):
+    pass
+
+class InvalidFlagsError(EngineScriptError):
+    def __init__(self, *args, **kwargs):
+        EngineScriptError.__init__(self, 'invalid flags combination')
+
+class InvalidIndexError(EngineScriptError):
+    def __init__(self, *args, **kwargs):
+        EngineScriptError.__init__(self, 'invalid input index')
+
+class UnsupportedAddressError(EngineScriptError):
+    def __init__(self, *args, **kwargs):
+        EngineScriptError.__init__(self, 'unsupported address type')
+
+class BadNumRequiredError(EngineScriptError):
+    def __init__(self, *args, **kwargs):
+        EngineScriptError.__init__(self, 'more signatures required than keys present')
+
+class SighashSingleIdxError(EngineScriptError):
+    def __init__(self, *args, **kwargs):
+        EngineScriptError.__init__(self, 'invalid SIGHASH_SINGLE script index')
+
+class SubstrIndexNegativeError(EngineScriptError):
+    def __init__(self, *args, **kwargs):
+        EngineScriptError.__init__(self, 'negative number given for substring index')
+
+class SubstrIdxOutOfBoundsError(EngineScriptError):
+    def __init__(self, *args, **kwargs):
+        EngineScriptError.__init__(self, 'out of bounds number given for substring index')
+
+class NegativeRotationError(EngineScriptError):
+    def __init__(self, *args, **kwargs):
+        EngineScriptError.__init__(self, 'rotation depth negative')
+
+class RotationOverflowError(EngineScriptError):
+    def __init__(self, *args, **kwargs):
+        EngineScriptError.__init__(self, 'rotation depth out of bounds')
+
+class NegativeShiftError(EngineScriptError):
+    def __init__(self, *args, **kwargs):
+        EngineScriptError.__init__(self, 'shift depth negative')
+
+class ShiftOverflowError(EngineScriptError):
+    def __init__(self, *args, **kwargs):
+        EngineScriptError.__init__(self, 'shift depth out of bounds')
+
+class DivideByZeroError(EngineScriptError):
+    def __init__(self, *args, **kwargs):
+        EngineScriptError.__init__(self, 'division by zero')
+
+class P2SHStakeOpCodesError(EngineScriptError):
+    def __init__(self, *args, **kwargs):
+        EngineScriptError.__init__(self, 'stake opcodes were found in a p2sh script')
 
