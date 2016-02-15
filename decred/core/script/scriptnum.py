@@ -43,7 +43,7 @@ def num2bytearray(n):
     """Convert an integer to encoded bytes."""
     return _bignum.bn2vch(n)
 
-def script_num(v, require_minimal, script_num_len):
+def script_num(v, require_minimal=False, script_num_len=4):
     """Convert encoded bytes to an integer."""
     if len(v) > script_num_len:
         raise StackNumberTooBigError()

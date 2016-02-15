@@ -3,10 +3,12 @@ from collections import namedtuple
 import sys
 import struct
 import hashlib
+import binascii
 
 from bitcoin.core.scripteval import _CastToBool
 
 from decred.core.chaincfg import sig_hash_optimization
+from decred.core.key import ECTypeSecp256k1, ECTypeEdwards, ECTypeSecSchnorr
 from decred.core.serialize import DecredHash, Hash160
 from .scriptnum import StackMinimalDataError, script_num, math_op_code_max_script_num_len, int_32
 from .errors import *
@@ -293,321 +295,6 @@ OpCondFalse = 0
 OpCondTrue  = 1
 OpCondSkip  = 2
 
-# opcodeArray holds details about all possible opcodes such as how many bytes
-# the opcode and any associated data should take, its human-readable name, and
-# the handler function.
-opcodeArray = [
-    # Data push opcodes.
-    Opcode(OP_FALSE, "OP_0", 1, opcodeFalse),
-    Opcode(OP_DATA_1, "OP_DATA_1", 2, opcodePushData),
-    Opcode(OP_DATA_2, "OP_DATA_2", 3, opcodePushData),
-    Opcode(OP_DATA_3, "OP_DATA_3", 4, opcodePushData),
-    Opcode(OP_DATA_4, "OP_DATA_4", 5, opcodePushData),
-    Opcode(OP_DATA_5, "OP_DATA_5", 6, opcodePushData),
-    Opcode(OP_DATA_6, "OP_DATA_6", 7, opcodePushData),
-    Opcode(OP_DATA_7, "OP_DATA_7", 8, opcodePushData),
-    Opcode(OP_DATA_8, "OP_DATA_8", 9, opcodePushData),
-    Opcode(OP_DATA_9, "OP_DATA_9", 10, opcodePushData),
-    Opcode(OP_DATA_10, "OP_DATA_10", 11, opcodePushData),
-    Opcode(OP_DATA_11, "OP_DATA_11", 12, opcodePushData),
-    Opcode(OP_DATA_12, "OP_DATA_12", 13, opcodePushData),
-    Opcode(OP_DATA_13, "OP_DATA_13", 14, opcodePushData),
-    Opcode(OP_DATA_14, "OP_DATA_14", 15, opcodePushData),
-    Opcode(OP_DATA_15, "OP_DATA_15", 16, opcodePushData),
-    Opcode(OP_DATA_16, "OP_DATA_16", 17, opcodePushData),
-    Opcode(OP_DATA_17, "OP_DATA_17", 18, opcodePushData),
-    Opcode(OP_DATA_18, "OP_DATA_18", 19, opcodePushData),
-    Opcode(OP_DATA_19, "OP_DATA_19", 20, opcodePushData),
-    Opcode(OP_DATA_20, "OP_DATA_20", 21, opcodePushData),
-    Opcode(OP_DATA_21, "OP_DATA_21", 22, opcodePushData),
-    Opcode(OP_DATA_22, "OP_DATA_22", 23, opcodePushData),
-    Opcode(OP_DATA_23, "OP_DATA_23", 24, opcodePushData),
-    Opcode(OP_DATA_24, "OP_DATA_24", 25, opcodePushData),
-    Opcode(OP_DATA_25, "OP_DATA_25", 26, opcodePushData),
-    Opcode(OP_DATA_26, "OP_DATA_26", 27, opcodePushData),
-    Opcode(OP_DATA_27, "OP_DATA_27", 28, opcodePushData),
-    Opcode(OP_DATA_28, "OP_DATA_28", 29, opcodePushData),
-    Opcode(OP_DATA_29, "OP_DATA_29", 30, opcodePushData),
-    Opcode(OP_DATA_30, "OP_DATA_30", 31, opcodePushData),
-    Opcode(OP_DATA_31, "OP_DATA_31", 32, opcodePushData),
-    Opcode(OP_DATA_32, "OP_DATA_32", 33, opcodePushData),
-    Opcode(OP_DATA_33, "OP_DATA_33", 34, opcodePushData),
-    Opcode(OP_DATA_34, "OP_DATA_34", 35, opcodePushData),
-    Opcode(OP_DATA_35, "OP_DATA_35", 36, opcodePushData),
-    Opcode(OP_DATA_36, "OP_DATA_36", 37, opcodePushData),
-    Opcode(OP_DATA_37, "OP_DATA_37", 38, opcodePushData),
-    Opcode(OP_DATA_38, "OP_DATA_38", 39, opcodePushData),
-    Opcode(OP_DATA_39, "OP_DATA_39", 40, opcodePushData),
-    Opcode(OP_DATA_40, "OP_DATA_40", 41, opcodePushData),
-    Opcode(OP_DATA_41, "OP_DATA_41", 42, opcodePushData),
-    Opcode(OP_DATA_42, "OP_DATA_42", 43, opcodePushData),
-    Opcode(OP_DATA_43, "OP_DATA_43", 44, opcodePushData),
-    Opcode(OP_DATA_44, "OP_DATA_44", 45, opcodePushData),
-    Opcode(OP_DATA_45, "OP_DATA_45", 46, opcodePushData),
-    Opcode(OP_DATA_46, "OP_DATA_46", 47, opcodePushData),
-    Opcode(OP_DATA_47, "OP_DATA_47", 48, opcodePushData),
-    Opcode(OP_DATA_48, "OP_DATA_48", 49, opcodePushData),
-    Opcode(OP_DATA_49, "OP_DATA_49", 50, opcodePushData),
-    Opcode(OP_DATA_50, "OP_DATA_50", 51, opcodePushData),
-    Opcode(OP_DATA_51, "OP_DATA_51", 52, opcodePushData),
-    Opcode(OP_DATA_52, "OP_DATA_52", 53, opcodePushData),
-    Opcode(OP_DATA_53, "OP_DATA_53", 54, opcodePushData),
-    Opcode(OP_DATA_54, "OP_DATA_54", 55, opcodePushData),
-    Opcode(OP_DATA_55, "OP_DATA_55", 56, opcodePushData),
-    Opcode(OP_DATA_56, "OP_DATA_56", 57, opcodePushData),
-    Opcode(OP_DATA_57, "OP_DATA_57", 58, opcodePushData),
-    Opcode(OP_DATA_58, "OP_DATA_58", 59, opcodePushData),
-    Opcode(OP_DATA_59, "OP_DATA_59", 60, opcodePushData),
-    Opcode(OP_DATA_60, "OP_DATA_60", 61, opcodePushData),
-    Opcode(OP_DATA_61, "OP_DATA_61", 62, opcodePushData),
-    Opcode(OP_DATA_62, "OP_DATA_62", 63, opcodePushData),
-    Opcode(OP_DATA_63, "OP_DATA_63", 64, opcodePushData),
-    Opcode(OP_DATA_64, "OP_DATA_64", 65, opcodePushData),
-    Opcode(OP_DATA_65, "OP_DATA_65", 66, opcodePushData),
-    Opcode(OP_DATA_66, "OP_DATA_66", 67, opcodePushData),
-    Opcode(OP_DATA_67, "OP_DATA_67", 68, opcodePushData),
-    Opcode(OP_DATA_68, "OP_DATA_68", 69, opcodePushData),
-    Opcode(OP_DATA_69, "OP_DATA_69", 70, opcodePushData),
-    Opcode(OP_DATA_70, "OP_DATA_70", 71, opcodePushData),
-    Opcode(OP_DATA_71, "OP_DATA_71", 72, opcodePushData),
-    Opcode(OP_DATA_72, "OP_DATA_72", 73, opcodePushData),
-    Opcode(OP_DATA_73, "OP_DATA_73", 74, opcodePushData),
-    Opcode(OP_DATA_74, "OP_DATA_74", 75, opcodePushData),
-    Opcode(OP_DATA_75, "OP_DATA_75", 76, opcodePushData),
-    Opcode(OP_PUSHDATA1, "OP_PUSHDATA1", -1, opcodePushData),
-    Opcode(OP_PUSHDATA2, "OP_PUSHDATA2", -2, opcodePushData),
-    Opcode(OP_PUSHDATA4, "OP_PUSHDATA4", -4, opcodePushData),
-    Opcode(OP_1NEGATE, "OP_1NEGATE", 1, opcode1Negate),
-    Opcode(OP_RESERVED, "OP_RESERVED", 1, opcodeReserved),
-    Opcode(OP_TRUE, "OP_1", 1, opcodeN),
-    Opcode(OP_2, "OP_2", 1, opcodeN),
-    Opcode(OP_3, "OP_3", 1, opcodeN),
-    Opcode(OP_4, "OP_4", 1, opcodeN),
-    Opcode(OP_5, "OP_5", 1, opcodeN),
-    Opcode(OP_6, "OP_6", 1, opcodeN),
-    Opcode(OP_7, "OP_7", 1, opcodeN),
-    Opcode(OP_8, "OP_8", 1, opcodeN),
-    Opcode(OP_9, "OP_9", 1, opcodeN),
-    Opcode(OP_10, "OP_10", 1, opcodeN),
-    Opcode(OP_11, "OP_11", 1, opcodeN),
-    Opcode(OP_12, "OP_12", 1, opcodeN),
-    Opcode(OP_13, "OP_13", 1, opcodeN),
-    Opcode(OP_14, "OP_14", 1, opcodeN),
-    Opcode(OP_15, "OP_15", 1, opcodeN),
-    Opcode(OP_16, "OP_16", 1, opcodeN),
-
-    # Control opcodes.
-    Opcode(OP_NOP, "OP_NOP", 1, opcodeNop),
-    Opcode(OP_VER, "OP_VER", 1, opcodeReserved),
-    Opcode(OP_IF, "OP_IF", 1, opcodeIf),
-    Opcode(OP_NOTIF, "OP_NOTIF", 1, opcodeNotIf),
-    Opcode(OP_VERIF, "OP_VERIF", 1, opcodeReserved),
-    Opcode(OP_VERNOTIF, "OP_VERNOTIF", 1, opcodeReserved),
-    Opcode(OP_ELSE, "OP_ELSE", 1, opcodeElse),
-    Opcode(OP_ENDIF, "OP_ENDIF", 1, opcodeEndif),
-    Opcode(OP_VERIFY, "OP_VERIFY", 1, opcodeVerify),
-    Opcode(OP_RETURN, "OP_RETURN", 1, opcodeReturn),
-    Opcode(OP_CHECKLOCKTIMEVERIFY, "OP_CHECKLOCKTIMEVERIFY", 1, opcodeCheckLockTimeVerify),
-
-    # Stack opcodes.
-    Opcode(OP_TOALTSTACK, "OP_TOALTSTACK", 1, opcodeToAltStack),
-    Opcode(OP_FROMALTSTACK, "OP_FROMALTSTACK", 1, opcodeFromAltStack),
-    Opcode(OP_2DROP, "OP_2DROP", 1, opcode2Drop),
-    Opcode(OP_2DUP, "OP_2DUP", 1, opcode2Dup),
-    Opcode(OP_3DUP, "OP_3DUP", 1, opcode3Dup),
-    Opcode(OP_2OVER, "OP_2OVER", 1, opcode2Over),
-    Opcode(OP_2ROT, "OP_2ROT", 1, opcode2Rot),
-    Opcode(OP_2SWAP, "OP_2SWAP", 1, opcode2Swap),
-    Opcode(OP_IFDUP, "OP_IFDUP", 1, opcodeIfDup),
-    Opcode(OP_DEPTH, "OP_DEPTH", 1, opcodeDepth),
-    Opcode(OP_DROP, "OP_DROP", 1, opcodeDrop),
-    Opcode(OP_DUP, "OP_DUP", 1, opcodeDup),
-    Opcode(OP_NIP, "OP_NIP", 1, opcodeNip),
-    Opcode(OP_OVER, "OP_OVER", 1, opcodeOver),
-    Opcode(OP_PICK, "OP_PICK", 1, opcodePick),
-    Opcode(OP_ROLL, "OP_ROLL", 1, opcodeRoll),
-    Opcode(OP_ROT, "OP_ROT", 1, opcodeRot),
-    Opcode(OP_SWAP, "OP_SWAP", 1, opcodeSwap),
-    Opcode(OP_TUCK, "OP_TUCK", 1, opcodeTuck),
-
-    # Splice opcodes.
-    Opcode(OP_CAT, "OP_CAT", 1, opcodeCat),
-    Opcode(OP_SUBSTR, "OP_SUBSTR", 1, opcodeSubstr),
-    Opcode(OP_LEFT, "OP_LEFT", 1, opcodeLeft),
-    Opcode(OP_RIGHT, "OP_RIGHT", 1, opcodeRight),
-    Opcode(OP_SIZE, "OP_SIZE", 1, opcodeSize),
-
-    # Bitwise logic opcodes for int32 registers derived from the stack.
-    Opcode(OP_INVERT, "OP_INVERT", 1, opcodeInvert),
-    Opcode(OP_AND, "OP_AND", 1, opcodeAnd),
-    Opcode(OP_OR, "OP_OR", 1, opcodeOr),
-    Opcode(OP_XOR, "OP_XOR", 1, opcodeXor),
-
-    # Bytewise comparison function opcodes for byte strings.
-    Opcode(OP_EQUAL, "OP_EQUAL", 1, opcodeEqual),
-    Opcode(OP_EQUALVERIFY, "OP_EQUALVERIFY", 1, opcodeEqualVerify),
-
-    # Bitwise rotation opcodes for an int32 register derived from the stack.
-    Opcode(OP_ROTR, "OP_ROTR", 1, opcodeRotr),
-    Opcode(OP_ROTL, "OP_ROTL", 1, opcodeRotl),
-
-    # Numeric related opcodes.
-    Opcode(OP_1ADD, "OP_1ADD", 1, opcode1Add),
-    Opcode(OP_1SUB, "OP_1SUB", 1, opcode1Sub),
-    Opcode(OP_2MUL, "OP_2MUL", 1, opcodeNop),
-    Opcode(OP_2DIV, "OP_2DIV", 1, opcodeNop),
-    Opcode(OP_NEGATE, "OP_NEGATE", 1, opcodeNegate),
-    Opcode(OP_ABS, "OP_ABS", 1, opcodeAbs),
-    Opcode(OP_NOT, "OP_NOT", 1, opcodeNot),
-    Opcode(OP_0NOTEQUAL, "OP_0NOTEQUAL", 1, opcode0NotEqual),
-    Opcode(OP_ADD, "OP_ADD", 1, opcodeAdd),
-    Opcode(OP_SUB, "OP_SUB", 1, opcodeSub),
-    Opcode(OP_MUL, "OP_MUL", 1, opcodeMul),
-    Opcode(OP_DIV, "OP_DIV", 1, opcodeDiv),
-    Opcode(OP_MOD, "OP_MOD", 1, opcodeMod),
-    Opcode(OP_LSHIFT, "OP_LSHIFT", 1, opcodeLShift),
-    Opcode(OP_RSHIFT, "OP_RSHIFT", 1, opcodeRShift),
-    Opcode(OP_BOOLAND, "OP_BOOLAND", 1, opcodeBoolAnd),
-    Opcode(OP_BOOLOR, "OP_BOOLOR", 1, opcodeBoolOr),
-    Opcode(OP_NUMEQUAL, "OP_NUMEQUAL", 1, opcodeNumEqual),
-    Opcode(OP_NUMEQUALVERIFY, "OP_NUMEQUALVERIFY", 1, opcodeNumEqualVerify),
-    Opcode(OP_NUMNOTEQUAL, "OP_NUMNOTEQUAL", 1, opcodeNumNotEqual),
-    Opcode(OP_LESSTHAN, "OP_LESSTHAN", 1, opcodeLessThan),
-    Opcode(OP_GREATERTHAN, "OP_GREATERTHAN", 1, opcodeGreaterThan),
-    Opcode(OP_LESSTHANOREQUAL, "OP_LESSTHANOREQUAL", 1, opcodeLessThanOrEqual),
-    Opcode(OP_GREATERTHANOREQUAL, "OP_GREATERTHANOREQUAL", 1, opcodeGreaterThanOrEqual),
-    Opcode(OP_MIN, "OP_MIN", 1, opcodeMin),
-    Opcode(OP_MAX, "OP_MAX", 1, opcodeMax),
-    Opcode(OP_WITHIN, "OP_WITHIN", 1, opcodeWithin),
-
-    # Crypto opcodes.
-    Opcode(OP_RIPEMD160, "OP_RIPEMD160", 1, opcodeRipemd160),
-    Opcode(OP_SHA1, "OP_SHA1", 1, opcodeSha1),
-    Opcode(OP_SHA256, "OP_SHA256", 1, opcodeSha256),
-    Opcode(OP_HASH160, "OP_HASH160", 1, opcodeHash160),
-    Opcode(OP_HASH256, "OP_HASH256", 1, opcodeHash256),
-    Opcode(OP_CODESEPARATOR, "OP_CODESEPARATOR", 1, opcodeDisabled), // Disabled
-    Opcode(OP_CHECKSIG, "OP_CHECKSIG", 1, opcodeCheckSig),
-    Opcode(OP_CHECKSIGVERIFY, "OP_CHECKSIGVERIFY", 1, opcodeCheckSigVerify),
-    Opcode(OP_CHECKMULTISIG, "OP_CHECKMULTISIG", 1, opcodeCheckMultiSig),
-    Opcode(OP_CHECKMULTISIGVERIFY, "OP_CHECKMULTISIGVERIFY", 1, opcodeCheckMultiSigVerify),
-
-    # Reserved opcodes.
-    Opcode(OP_NOP1, "OP_NOP1", 1, opcodeNop),
-    Opcode(OP_NOP3, "OP_NOP3", 1, opcodeNop),
-    Opcode(OP_NOP4, "OP_NOP4", 1, opcodeNop),
-    Opcode(OP_NOP5, "OP_NOP5", 1, opcodeNop),
-    Opcode(OP_NOP6, "OP_NOP6", 1, opcodeNop),
-    Opcode(OP_NOP7, "OP_NOP7", 1, opcodeNop),
-    Opcode(OP_NOP8, "OP_NOP8", 1, opcodeNop),
-    Opcode(OP_NOP9, "OP_NOP9", 1, opcodeNop),
-    Opcode(OP_NOP10, "OP_NOP10", 1, opcodeNop),
-
-    # SS* opcodes.
-    Opcode(OP_SSTX, "OP_SSTX", 1, opcodeNop),
-    Opcode(OP_SSGEN, "OP_SSGEN", 1, opcodeNop),
-    Opcode(OP_SSRTX, "OP_SSRTX", 1, opcodeNop),
-    Opcode(OP_SSTXCHANGE, "OP_SSTXCHANGE", 1, opcodeNop),
-
-    # Alternative checksig opcode.
-    Opcode(OP_CHECKSIGALT, "OP_CHECKSIGALT", 1, opcodeCheckSigAlt),
-    Opcode(OP_CHECKSIGALTVERIFY, "OP_CHECKSIGALTVERIFY", 1, opcodeCheckSigAltVerify),
-
-    # Undefined opcodes.
-    Opcode(OP_UNKNOWN192, "OP_UNKNOWN192", 1, opcodeNop),
-    Opcode(OP_UNKNOWN193, "OP_UNKNOWN193", 1, opcodeNop),
-    Opcode(OP_UNKNOWN194, "OP_UNKNOWN194", 1, opcodeNop),
-    Opcode(OP_UNKNOWN195, "OP_UNKNOWN195", 1, opcodeNop),
-    Opcode(OP_UNKNOWN196, "OP_UNKNOWN196", 1, opcodeNop),
-    Opcode(OP_UNKNOWN197, "OP_UNKNOWN197", 1, opcodeNop),
-    Opcode(OP_UNKNOWN198, "OP_UNKNOWN198", 1, opcodeNop),
-    Opcode(OP_UNKNOWN199, "OP_UNKNOWN199", 1, opcodeNop),
-    Opcode(OP_UNKNOWN200, "OP_UNKNOWN200", 1, opcodeNop),
-    Opcode(OP_UNKNOWN201, "OP_UNKNOWN201", 1, opcodeNop),
-    Opcode(OP_UNKNOWN202, "OP_UNKNOWN202", 1, opcodeNop),
-    Opcode(OP_UNKNOWN203, "OP_UNKNOWN203", 1, opcodeNop),
-    Opcode(OP_UNKNOWN204, "OP_UNKNOWN204", 1, opcodeNop),
-    Opcode(OP_UNKNOWN205, "OP_UNKNOWN205", 1, opcodeNop),
-    Opcode(OP_UNKNOWN206, "OP_UNKNOWN206", 1, opcodeNop),
-    Opcode(OP_UNKNOWN207, "OP_UNKNOWN207", 1, opcodeNop),
-    Opcode(OP_UNKNOWN208, "OP_UNKNOWN208", 1, opcodeNop),
-    Opcode(OP_UNKNOWN209, "OP_UNKNOWN209", 1, opcodeNop),
-    Opcode(OP_UNKNOWN210, "OP_UNKNOWN210", 1, opcodeNop),
-    Opcode(OP_UNKNOWN211, "OP_UNKNOWN211", 1, opcodeNop),
-    Opcode(OP_UNKNOWN212, "OP_UNKNOWN212", 1, opcodeNop),
-    Opcode(OP_UNKNOWN213, "OP_UNKNOWN213", 1, opcodeNop),
-    Opcode(OP_UNKNOWN214, "OP_UNKNOWN214", 1, opcodeNop),
-    Opcode(OP_UNKNOWN215, "OP_UNKNOWN215", 1, opcodeNop),
-    Opcode(OP_UNKNOWN216, "OP_UNKNOWN216", 1, opcodeNop),
-    Opcode(OP_UNKNOWN217, "OP_UNKNOWN217", 1, opcodeNop),
-    Opcode(OP_UNKNOWN218, "OP_UNKNOWN218", 1, opcodeNop),
-    Opcode(OP_UNKNOWN219, "OP_UNKNOWN219", 1, opcodeNop),
-    Opcode(OP_UNKNOWN220, "OP_UNKNOWN220", 1, opcodeNop),
-    Opcode(OP_UNKNOWN221, "OP_UNKNOWN221", 1, opcodeNop),
-    Opcode(OP_UNKNOWN222, "OP_UNKNOWN222", 1, opcodeNop),
-    Opcode(OP_UNKNOWN223, "OP_UNKNOWN223", 1, opcodeNop),
-    Opcode(OP_UNKNOWN224, "OP_UNKNOWN224", 1, opcodeNop),
-    Opcode(OP_UNKNOWN225, "OP_UNKNOWN225", 1, opcodeNop),
-    Opcode(OP_UNKNOWN226, "OP_UNKNOWN226", 1, opcodeNop),
-    Opcode(OP_UNKNOWN227, "OP_UNKNOWN227", 1, opcodeNop),
-    Opcode(OP_UNKNOWN228, "OP_UNKNOWN228", 1, opcodeNop),
-    Opcode(OP_UNKNOWN229, "OP_UNKNOWN229", 1, opcodeNop),
-    Opcode(OP_UNKNOWN230, "OP_UNKNOWN230", 1, opcodeNop),
-    Opcode(OP_UNKNOWN231, "OP_UNKNOWN231", 1, opcodeNop),
-    Opcode(OP_UNKNOWN232, "OP_UNKNOWN232", 1, opcodeNop),
-    Opcode(OP_UNKNOWN233, "OP_UNKNOWN233", 1, opcodeNop),
-    Opcode(OP_UNKNOWN234, "OP_UNKNOWN234", 1, opcodeNop),
-    Opcode(OP_UNKNOWN235, "OP_UNKNOWN235", 1, opcodeNop),
-    Opcode(OP_UNKNOWN236, "OP_UNKNOWN236", 1, opcodeNop),
-    Opcode(OP_UNKNOWN237, "OP_UNKNOWN237", 1, opcodeNop),
-    Opcode(OP_UNKNOWN238, "OP_UNKNOWN238", 1, opcodeNop),
-    Opcode(OP_UNKNOWN239, "OP_UNKNOWN239", 1, opcodeNop),
-    Opcode(OP_UNKNOWN240, "OP_UNKNOWN240", 1, opcodeNop),
-    Opcode(OP_UNKNOWN241, "OP_UNKNOWN241", 1, opcodeNop),
-    Opcode(OP_UNKNOWN242, "OP_UNKNOWN242", 1, opcodeNop),
-    Opcode(OP_UNKNOWN243, "OP_UNKNOWN243", 1, opcodeNop),
-    Opcode(OP_UNKNOWN244, "OP_UNKNOWN244", 1, opcodeNop),
-    Opcode(OP_UNKNOWN245, "OP_UNKNOWN245", 1, opcodeNop),
-    Opcode(OP_UNKNOWN246, "OP_UNKNOWN246", 1, opcodeNop),
-    Opcode(OP_UNKNOWN247, "OP_UNKNOWN247", 1, opcodeNop),
-    Opcode(OP_UNKNOWN248, "OP_UNKNOWN248", 1, opcodeNop),
-
-    # Bitcoin Core internal use opcode.  Defined here for completeness.
-    Opcode(OP_SMALLDATA, "OP_SMALLDATA", 1, opcodeInvalid),
-    Opcode(OP_SMALLINTEGER, "OP_SMALLINTEGER", 1, opcodeInvalid),
-    Opcode(OP_PUBKEYS, "OP_PUBKEYS", 1, opcodeInvalid),
-    Opcode(OP_UNKNOWN252, "OP_UNKNOWN252", 1, opcodeInvalid),
-    Opcode(OP_PUBKEYHASH, "OP_PUBKEYHASH", 1, opcodeInvalid),
-    Opcode(OP_PUBKEY, "OP_PUBKEY", 1, opcodeInvalid),
-
-    Opcode(OP_INVALIDOPCODE, "OP_INVALIDOPCODE", 1, opcodeInvalid),
-]
-
-# opcodeOnelineRepls defines opcode names which are replaced when doing a
-# one-line disassembly.  This is done to match the output of the reference
-# implementation while not changing the opcode names in the nicer full
-# disassembly.
-opcodeOnelineRepls = {
-    "OP_1NEGATE": "-1",
-    "OP_0":       "0",
-    "OP_1":       "1",
-    "OP_2":       "2",
-    "OP_3":       "3",
-    "OP_4":       "4",
-    "OP_5":       "5",
-    "OP_6":       "6",
-    "OP_7":       "7",
-    "OP_8":       "8",
-    "OP_9":       "9",
-    "OP_10":      "10",
-    "OP_11":      "11",
-    "OP_12":      "12",
-    "OP_13":      "13",
-    "OP_14":      "14",
-    "OP_15":      "15",
-    "OP_16":      "16",
-}
-
 class ParsedOpcode(object):
     """Represents an opcode that has been parsed and includes any potential data associated with it."""
     def __init__(self, opcode, data):
@@ -645,7 +332,7 @@ class ParsedOpcode(object):
         elif self.opcode.length == -4:
             ret_string += ' 0x%08x' % len(self.data)
 
-        return '%s 0x%02x' % (ret_string, self.data)
+        return '%s 0x%02s' % (ret_string, binascii.hexlify(self.data))
 
     def __str__(self):
         return self.human_readable()
@@ -781,7 +468,7 @@ def opcodePushData(op, vm):
 
 # opcode1Negate pushes -1, encoded as a number, to the data stack.
 def opcode1Negate(op, vm):
-    vm.dstack.push_int(script_num(-1))
+    vm.dstack.push_int(-1)
 
 # opcodeN is a common handler for the small integer data push opcodes.  It
 # pushes the numeric value the opcode represents (which will be from 1 to 16)
@@ -789,7 +476,7 @@ def opcode1Negate(op, vm):
 def opcodeN(op, vm):
     # The opcodes are all defined consecutively, so the numeric value is
     # the difference.
-    vm.dstack.push_int(script_num(op.opcode.value - (OP_1 - 1)))
+    vm.dstack.push_int(op.opcode.value - (OP_1 - 1))
 
 # opcodeNop is a common handler for the NOP family of opcodes.  As the name
 # implies it generally does nothing, however, it will return an error when
@@ -905,90 +592,59 @@ def opcodeVerify(op, vm):
 def opcodeReturn(op, vm):
     raise StackEarlyReturnError()
 
-# TODO
 def opcodeCheckLockTimeVerify(op, vm):
-    raise Exception('Not implemented')
-"""
-// opcodeCheckLockTimeVerify compares the top item on the data stack to the
-// LockTime field of the transaction containing the script signature
-// validating if the transaction outputs are spendable yet.  If flag
-// ScriptVerifyCheckLockTimeVerify is not set, the code continues as if OP_NOP2
-// were executed.
-func opcodeCheckLockTimeVerify(op *parsedOpcode, vm *Engine) error {
-	// If the ScriptVerifyCheckLockTimeVerify script flag is not set, treat
-	// opcode as OP_NOP2 instead.
-	if !vm.hasFlag(ScriptVerifyCheckLockTimeVerify) {
-		if vm.hasFlag(ScriptDiscourageUpgradableNops) {
-			return errors.New("OP_NOP2 reserved for soft-fork " +
-				"upgrades")
-		}
-		return nil
-	}
+    # if ScriptVerifyCheckLockTimeVerify is not set, treat opcode as OP_NOP2.
+    if not vm.has_flag(ScriptVerifyCheckLockTimeVerify):
+        if vm.has_flag(ScriptDiscourageUpgradableNops):
+            raise Exception('OP_NOP2 reserved for soft-fork upgrades')
 
-	// The current transaction locktime is a uint32 resulting in a maximum
-	// locktime of 2^32-1 (the year 2106).  However, scriptNums are signed
-	// and therefore a standard 4-byte scriptNum would only support up to a
-	// maximum of 2^31-1 (the year 2038).  Thus, a 5-byte scriptNum is used
-	// here since it will support up to 2^39-1 which allows dates beyond the
-	// current locktime limit.
-	//
-	// PeekByteArray is used here instead of PeekInt because we do not want
-	// to be limited to a 4-byte integer for reasons specified above.
-	so, err := vm.dstack.PeekByteArray(0)
-	if err != nil {
-		return err
-	}
-	lockTime, err := makeScriptNum(so, vm.dstack.verifyMinimalData, 5)
-	if err != nil {
-		return err
-	}
+    # The current transaction locktime is a uint32 resulting in a maximum
+    # locktime of 2^32-1 (the year 2106).  However, scriptNums are signed
+    # and therefore a standard 4-byte scriptNum would only support up to a
+    # maximum of 2^31-1 (the year 2038).  Thus, a 5-byte scriptNum is used
+    # here since it will support up to 2^39-1 which allows dates beyond the
+    # current locktime limit.
+    #
+    # PeekByteArray is used here instead of PeekInt because we do not want
+    # to be limited to a 4-byte integer for reasons specified above.
+    so = vm.dstack.peek_bytearray(0)
+    lockTime = script_num(so, vm.dstack.verifyMinimalData, 5)
 
-	// In the rare event that the argument may be < 0 due to some arithmetic
-	// being done first, you can always use 0 OP_MAX OP_CHECKLOCKTIMEVERIFY.
-	if lockTime < 0 {
-		return fmt.Errorf("negative locktime: %d", lockTime)
-	}
+    # In the rare event that the argument may be < 0 due to some arithmetic
+    # being done first, you can always use 0 OP_MAX OP_CHECKLOCKTIMEVERIFY.
+    if lockTime < 0:
+        raise Exception('Negative locktime: %d' % lockTime)
 
-	// The lock time field of a transaction is either a block height at
-	// which the transaction is finalized or a timestamp depending on if the
-	// value is before the txscript.LockTimeThreshold.  When it is under the
-	// threshold it is a block height.
-	//
-	// The lockTimes in both the script and transaction must be of the same
-	// type.
-	if !((vm.tx.LockTime < LockTimeThreshold && int64(lockTime) < int64(LockTimeThreshold)) ||
-		(vm.tx.LockTime >= LockTimeThreshold && int64(lockTime) >= int64(LockTimeThreshold))) {
-		return fmt.Errorf("mismatched locktime types -- tx locktime %d, stack "+
-			"locktime %d", vm.tx.LockTime, lockTime)
-	}
+    # The lock time field of a transaction is either a block height at
+    # which the transaction is finalized or a timestamp depending on if the
+    # value is before the txscript.LockTimeThreshold.  When it is under the
+    # threshold it is a block height.
+    #
+    # The lockTimes in both the script and transaction must be of the same
+    # type.
+    if not ((vm.tx.locktime < LockTimeThreshold and lockTime < LockTimeThreshold) or
+            (vm.tx.locktime >= LockTimeThreshold and lockTime >= LockTimeThreshold)):
+        raise Exception('mismatched locktime types')
 
-	if int64(lockTime) > int64(vm.tx.LockTime) {
-		str := "locktime requirement not satisfied -- locktime is " +
-			"greater than the transaction locktime: %d > %d"
-		return fmt.Errorf(str, lockTime, vm.tx.LockTime)
-	}
+    if lockTime > vm.tx.locktime:
+        raise Exception('locktime requirement not satisfied')
 
-	// The lock time feature can also be disabled, thereby bypassing
-	// OP_CHECKLOCKTIMEVERIFY, if every transaction input has been finalized by
-	// setting its sequence to the maximum value (wire.MaxTxInSequenceNum).  This
-	// condition would result in the transaction being allowed into the blockchain
-	// making the opcode ineffective.
-	//
-	// This condition is prevented by enforcing that the input being used by
-	// the opcode is unlocked (its sequence number is less than the max
-	// value).  This is sufficient to prove correctness without having to
-	// check every input.
-	//
-	// NOTE: This implies that even if the transaction is not finalized due to
-	// another input being unlocked, the opcode execution will still fail when the
-	// input being used by the opcode is locked.
-	if vm.tx.TxIn[vm.txIdx].Sequence == wire.MaxTxInSequenceNum {
-		return errors.New("transaction input is finalized")
-	}
-
-	return nil
-}
-"""
+    # The lock time feature can also be disabled, thereby bypassing
+    # OP_CHECKLOCKTIMEVERIFY, if every transaction input has been finalized by
+    # setting its sequence to the maximum value (wire.MaxTxInSequenceNum).  This
+    # condition would result in the transaction being allowed into the blockchain
+    # making the opcode ineffective.
+    #
+    # This condition is prevented by enforcing that the input being used by
+    # the opcode is unlocked (its sequence number is less than the max
+    # value).  This is sufficient to prove correctness without having to
+    # check every input.
+    #
+    # NOTE: This implies that even if the transaction is not finalized due to
+    # another input being unlocked, the opcode execution will still fail when the
+    # input being used by the opcode is locked.
+    if vm.tx.txins[vm.tx_idx].sequence == MaxTxInSequenceNum:
+        raise Exception('transaction input is finalized')
 
 # opcodeToAltStack removes the top item from the main data stack and pushes it
 # onto the alternate data stack.
@@ -1061,7 +717,7 @@ def opcodeIfDup(op, vm):
 # Example with 2 items: [x1 x2] -> [x1 x2 2]
 # Example with 3 items: [x1 x2 x3] -> [x1 x2 x3 3]
 def opcodeDepth(op, vm):
-    vm.dstack.push_int(script_num(vm.dstack.depth()))
+    vm.dstack.push_int(vm.dstack.depth())
 
 # opcodeDrop removes the top item from the data stack.
 #
@@ -1240,14 +896,14 @@ def opcodeRight(op, vm):
 # Stack transformation: [... x1] -> [... x1 len(x1)]
 def opcodeSize(op, vm):
     val = vm.dstack.peek_bytearray(0)
-    vm.dstack.push_int(script_num(len(val)))
+    vm.dstack.push_int(len(val))
 
 # opcodeInvert pops the top item off the stack, interprets it as an int32,
 # inverts the bits, and then pushes it back to the stack.
 # Stack transformation: [... x1] -> [... ~x1]
 def opcodeInvert(op, vm):
     v0 = vm.dstack.pop_int(math_op_code_max_script_num_len)
-    vm.dstack.push_int(script_num(~int_32(v0)))
+    vm.dstack.push_int(~int_32(v0))
 
 # opcodeAnd pops the top two items off the stack, interprets them as int32s,
 # bitwise ANDs the value, and then pushes the result back to the stack.
@@ -1256,7 +912,7 @@ def opcodeAnd(op, vm):
     v0 = vm.dstack.pop_int(math_op_code_max_script_num_len)
     v1 = vm.dstack.pop_int(math_op_code_max_script_num_len)
 
-    vm.dstack.push_int(script_num(int_32(v0) & int_32(v1)))
+    vm.dstack.push_int(int_32(v0) & int_32(v1))
 
 # opcodeOr pops the top two items off the stack, interprets them as int32s,
 # bitwise ORs the value, and then pushes the result back to the stack.
@@ -1265,7 +921,7 @@ def opcodeOr(op, vm):
     v0 = vm.dstack.pop_int(math_op_code_max_script_num_len)
     v1 = vm.dstack.pop_int(math_op_code_max_script_num_len)
 
-    vm.dstack.push_int(script_num(int_32(v0) | int_32(v1)))
+    vm.dstack.push_int(int_32(v0) | int_32(v1))
 
 # opcodeXor pops the top two items off the stack, interprets them as int32s,
 # bitwise XORs the value, and then pushes the result back to the stack.
@@ -1274,7 +930,7 @@ def opcodeXor(op, vm):
     v0 = vm.dstack.pop_int(math_op_code_max_script_num_len)
     v1 = vm.dstack.pop_int(math_op_code_max_script_num_len)
 
-    vm.dstack.push_int(script_num(int_32(v0) ^ int_32(v1)))
+    vm.dstack.push_int(int_32(v0) ^ int_32(v1))
 
 # opcodeEqual removes the top 2 items of the data stack, compares them as raw
 # bytes, and pushes the result, encoded as a boolean, back to the stack.
@@ -1318,7 +974,7 @@ def opcodeRotr(op, vm):
     if v032 > 31:
         raise RotationOverflowError()
 
-    vm.dstack.push_int(script_num(rotate_right(v132, v032)))
+    vm.dstack.push_int(rotate_right(v132, v032))
 
 def rotate_left(value, count):
     return (value << count) | (value >> (32 - count))
@@ -1341,7 +997,7 @@ def opcodeRotl(op, vm):
     if v032 > 31:
         raise RotationOverflowError()
 
-    vm.dstack.push_int(script_num(rotate_left(v132, v032)))
+    vm.dstack.push_int(rotate_left(v132, v032))
 
 # opcode1Add treats the top item on the data stack as an integer and replaces
 # it with its incremented value (plus 1).
@@ -1392,9 +1048,9 @@ def opcodeAbs(op, vm):
 def opcodeNot(op, vm):
     m = vm.dstack.pop_int(math_op_code_max_script_num_len)
     if m == 0:
-        vm.dstack.push_int(script_num(0))
+        vm.dstack.push_int(0)
     else:
-        vm.dstack.push_int(script_num(1))
+        vm.dstack.push_int(1)
 
 # opcode0NotEqual treats the top item on the data stack as an integer and
 # replaces it with either a 0 if it is zero, or a 1 if it is not zero.
@@ -1439,7 +1095,7 @@ def opcodeMul(op, vm):
     v1 = vm.dstack.pop_int(math_op_code_max_script_num_len)
 
     v2 = int_32(v0) * int_32(v1)
-    vm.dstack.push_int(script_num(v2))
+    vm.dstack.push_int(v2)
 
 # opcodeDiv treats the top two items on the data stack as integers and replaces
 # them with the result of dividing the top entry by the second-to-top entry as
@@ -1454,7 +1110,7 @@ def opcodeDiv(op, vm):
         raise DivideByZeroError()
 
     v2 = int_32(v1) / int_32(v0)
-    vm.dstack.push_int(script_num(v2))
+    vm.dstack.push_int(v2)
 
 # opcodeMod treats the top two items on the data stack as integers and replaces
 # them with the result of the modulus the top entry by the second-to-top entry as
@@ -1469,7 +1125,7 @@ def opcodeMod(op, vm):
         raise DivideByZeroError()
 
     v2 = int_32(v1) % int_32(v0)
-    vm.dstack.push_int(script_num(v2))
+    vm.dstack.push_int(v2)
 
 # opcodeLShift pushes the top two items off the stack as integers. Both ints are
 # interpreted as int32s. The first item becomes the depth to shift left, while
@@ -1489,7 +1145,7 @@ def opcodeLShift(op, vm):
     if v032 > 32:
         raise ShiftOverflowError()
 
-    vm.dstack.push_int(script_num(v132 << v032))
+    vm.dstack.push_int(v132 << v032)
 
 # opcodeRShift pushes the top two items off the stack as integers. Both ints are
 # interpreted as int32s. The first item becomes the depth to shift right, while
@@ -1509,7 +1165,7 @@ def opcodeRShift(op, vm):
     if v032 > 32:
         raise ShiftOverflowError()
 
-    vm.dstack.push_int(script_num(v132 >> v032))
+    vm.dstack.push_int(v132 >> v032)
 
 # opcodeBoolAnd treats the top two items on the data stack as integers.  When
 # both of them are not zero, they are replaced with a 1, otherwise a 0.
@@ -1523,9 +1179,9 @@ def opcodeBoolAnd(op, vm):
     v1 = vm.dstack.pop_int(math_op_code_max_script_num_len) # x1
 
     if v0 != 0 and v1 != 0:
-        vm.dstack.push_int(script_num(1))
+        vm.dstack.push_int(1)
     else:
-        vm.dstack.push_int(script_num(0))
+        vm.dstack.push_int(0)
 
 # opcodeBoolOr treats the top two items on the data stack as integers.  When
 # either of them are not zero, they are replaced with a 1, otherwise a 0.
@@ -1539,9 +1195,9 @@ def opcodeBoolOr(op, vm):
     v1 = vm.dstack.pop_int(math_op_code_max_script_num_len) # x1
 
     if v0 != 0 or v1 != 0:
-        vm.dstack.push_int(script_num(1))
+        vm.dstack.push_int(1)
     else:
-        vm.dstack.push_int(script_num(0))
+        vm.dstack.push_int(0)
 
 # opcodeNumEqual treats the top two items on the data stack as integers.  When
 # they are equal, they are replaced with a 1, otherwise a 0.
@@ -1553,9 +1209,9 @@ def opcodeNumEqual(op, vm):
     v1 = vm.dstack.pop_int(math_op_code_max_script_num_len) # x1
 
     if v0 == v1:
-        vm.dstack.push_int(script_num(1))
+        vm.dstack.push_int(1)
     else:
-        vm.dstack.push_int(script_num(0))
+        vm.dstack.push_int(0)
 
 # opcodeNumEqualVerify is a combination of opcodeNumEqual and opcodeVerify.
 #
@@ -1579,9 +1235,9 @@ def opcodeNumNotEqual(op, vm):
     v1 = vm.dstack.pop_int(math_op_code_max_script_num_len) # x1
 
     if v0 != v1:
-        vm.dstack.push_int(script_num(1))
+        vm.dstack.push_int(1)
     else:
-        vm.dstack.push_int(script_num(0))
+        vm.dstack.push_int(0)
 
 # opcodeLessThan treats the top two items on the data stack as integers.  When
 # the second-to-top item is less than the top item, they are replaced with a 1,
@@ -1593,9 +1249,9 @@ def opcodeLessThan(op, vm):
     v1 = vm.dstack.pop_int(math_op_code_max_script_num_len) # x1
 
     if v1 < v0:
-        vm.dstack.push_int(script_num(1))
+        vm.dstack.push_int(1)
     else:
-        vm.dstack.push_int(script_num(0))
+        vm.dstack.push_int(0)
 
 # opcodeGreaterThan treats the top two items on the data stack as integers.
 # When the second-to-top item is greater than the top item, they are replaced
@@ -1607,9 +1263,9 @@ def opcodeGreaterThan(op, vm):
     v1 = vm.dstack.pop_int(math_op_code_max_script_num_len) # x1
 
     if v1 > v0:
-        vm.dstack.push_int(script_num(1))
+        vm.dstack.push_int(1)
     else:
-        vm.dstack.push_int(script_num(0))
+        vm.dstack.push_int(0)
 
 # opcodeLessThanOrEqual treats the top two items on the data stack as integers.
 # When the second-to-top item is less than or equal to the top item, they are
@@ -1621,9 +1277,9 @@ def opcodeLessThanOrEqual(op, vm):
     v1 = vm.dstack.pop_int(math_op_code_max_script_num_len) # x1
 
     if v1 <= v0:
-        vm.dstack.push_int(script_num(1))
+        vm.dstack.push_int(1)
     else:
-        vm.dstack.push_int(script_num(0))
+        vm.dstack.push_int(0)
 
 # opcodeGreaterThanOrEqual treats the top two items on the data stack as
 # integers.  When the second-to-top item is greater than or equal to the top
@@ -1635,9 +1291,9 @@ def opcodeGreaterThanOrEqual(op, vm):
     v1 = vm.dstack.pop_int(math_op_code_max_script_num_len) # x1
 
     if v1 >= v0:
-        vm.dstack.push_int(script_num(1))
+        vm.dstack.push_int(1)
     else:
-        vm.dstack.push_int(script_num(0))
+        vm.dstack.push_int(0)
 
 # opcodeMin treats the top two items on the data stack as integers and replaces
 # them with the minimum of the two.
@@ -1679,9 +1335,9 @@ def opcodeWithin(op, vm):
     x = vm.dstack.pop_int(math_op_code_max_script_num_len)
 
     if x >= min_val and x < max_val:
-        vm.dstack.push_int(script_num(1))
+        vm.dstack.push_int(1)
     else:
-        vm.dstack.push_int(script_num(0))
+        vm.dstack.push_int(0)
 
 # opcodeRipemd160 treats the top item of the data stack as raw bytes and
 # replaces it with ripemd160(data).
@@ -2052,16 +1708,15 @@ def opcodeCheckMultiSigVerify(op, vm):
 # TODO
 def opcodeCheckSigAlt(op, vm):
     raise Exception('Not implemented')
+
+# ECDSA signature schemes encoded as a single byte. Secp256k1 traditional
+# is non-accessible through CheckSigAlt, but is used elsewhere for in the
+# sign function to indicate the type of signature to generate.
+secp = ECTypeSecp256k1
+edwards = ECTypeEdwards
+secSchnorr = ECTypeSecSchnorr
+
 """
-// ECDSA signature schemes encoded as a single byte. Secp256k1 traditional
-// is non-accessible through CheckSigAlt, but is used elsewhere for in the
-// sign function to indicate the type of signature to generate.
-type sigTypes uint8
-
-var secp = sigTypes(chainec.ECTypeSecp256k1)
-var edwards = sigTypes(chainec.ECTypeEdwards)
-var secSchnorr = sigTypes(chainec.ECTypeSecSchnorr)
-
 // opcodeCheckSigAlt accepts a three item stack and pops off the first three
 // items. The first item is a signature type (1-255, can not be zero or the
 // soft fork will fail). Any unused signature types return true, so that future
@@ -2242,6 +1897,321 @@ func opcodeCheckSigAlt(op *parsedOpcode, vm *Engine) error {
 def opcodeCheckSigAltVerify(op, vm):
     opcodeCheckSigAlt(op, vm)
     opcodeVerify(op, vm)
+
+# opcodeArray holds details about all possible opcodes such as how many bytes
+# the opcode and any associated data should take, its human-readable name, and
+# the handler function.
+opcodeArray = [
+    # Data push opcodes.
+    Opcode(OP_FALSE, "OP_0", 1, opcodeFalse),
+    Opcode(OP_DATA_1, "OP_DATA_1", 2, opcodePushData),
+    Opcode(OP_DATA_2, "OP_DATA_2", 3, opcodePushData),
+    Opcode(OP_DATA_3, "OP_DATA_3", 4, opcodePushData),
+    Opcode(OP_DATA_4, "OP_DATA_4", 5, opcodePushData),
+    Opcode(OP_DATA_5, "OP_DATA_5", 6, opcodePushData),
+    Opcode(OP_DATA_6, "OP_DATA_6", 7, opcodePushData),
+    Opcode(OP_DATA_7, "OP_DATA_7", 8, opcodePushData),
+    Opcode(OP_DATA_8, "OP_DATA_8", 9, opcodePushData),
+    Opcode(OP_DATA_9, "OP_DATA_9", 10, opcodePushData),
+    Opcode(OP_DATA_10, "OP_DATA_10", 11, opcodePushData),
+    Opcode(OP_DATA_11, "OP_DATA_11", 12, opcodePushData),
+    Opcode(OP_DATA_12, "OP_DATA_12", 13, opcodePushData),
+    Opcode(OP_DATA_13, "OP_DATA_13", 14, opcodePushData),
+    Opcode(OP_DATA_14, "OP_DATA_14", 15, opcodePushData),
+    Opcode(OP_DATA_15, "OP_DATA_15", 16, opcodePushData),
+    Opcode(OP_DATA_16, "OP_DATA_16", 17, opcodePushData),
+    Opcode(OP_DATA_17, "OP_DATA_17", 18, opcodePushData),
+    Opcode(OP_DATA_18, "OP_DATA_18", 19, opcodePushData),
+    Opcode(OP_DATA_19, "OP_DATA_19", 20, opcodePushData),
+    Opcode(OP_DATA_20, "OP_DATA_20", 21, opcodePushData),
+    Opcode(OP_DATA_21, "OP_DATA_21", 22, opcodePushData),
+    Opcode(OP_DATA_22, "OP_DATA_22", 23, opcodePushData),
+    Opcode(OP_DATA_23, "OP_DATA_23", 24, opcodePushData),
+    Opcode(OP_DATA_24, "OP_DATA_24", 25, opcodePushData),
+    Opcode(OP_DATA_25, "OP_DATA_25", 26, opcodePushData),
+    Opcode(OP_DATA_26, "OP_DATA_26", 27, opcodePushData),
+    Opcode(OP_DATA_27, "OP_DATA_27", 28, opcodePushData),
+    Opcode(OP_DATA_28, "OP_DATA_28", 29, opcodePushData),
+    Opcode(OP_DATA_29, "OP_DATA_29", 30, opcodePushData),
+    Opcode(OP_DATA_30, "OP_DATA_30", 31, opcodePushData),
+    Opcode(OP_DATA_31, "OP_DATA_31", 32, opcodePushData),
+    Opcode(OP_DATA_32, "OP_DATA_32", 33, opcodePushData),
+    Opcode(OP_DATA_33, "OP_DATA_33", 34, opcodePushData),
+    Opcode(OP_DATA_34, "OP_DATA_34", 35, opcodePushData),
+    Opcode(OP_DATA_35, "OP_DATA_35", 36, opcodePushData),
+    Opcode(OP_DATA_36, "OP_DATA_36", 37, opcodePushData),
+    Opcode(OP_DATA_37, "OP_DATA_37", 38, opcodePushData),
+    Opcode(OP_DATA_38, "OP_DATA_38", 39, opcodePushData),
+    Opcode(OP_DATA_39, "OP_DATA_39", 40, opcodePushData),
+    Opcode(OP_DATA_40, "OP_DATA_40", 41, opcodePushData),
+    Opcode(OP_DATA_41, "OP_DATA_41", 42, opcodePushData),
+    Opcode(OP_DATA_42, "OP_DATA_42", 43, opcodePushData),
+    Opcode(OP_DATA_43, "OP_DATA_43", 44, opcodePushData),
+    Opcode(OP_DATA_44, "OP_DATA_44", 45, opcodePushData),
+    Opcode(OP_DATA_45, "OP_DATA_45", 46, opcodePushData),
+    Opcode(OP_DATA_46, "OP_DATA_46", 47, opcodePushData),
+    Opcode(OP_DATA_47, "OP_DATA_47", 48, opcodePushData),
+    Opcode(OP_DATA_48, "OP_DATA_48", 49, opcodePushData),
+    Opcode(OP_DATA_49, "OP_DATA_49", 50, opcodePushData),
+    Opcode(OP_DATA_50, "OP_DATA_50", 51, opcodePushData),
+    Opcode(OP_DATA_51, "OP_DATA_51", 52, opcodePushData),
+    Opcode(OP_DATA_52, "OP_DATA_52", 53, opcodePushData),
+    Opcode(OP_DATA_53, "OP_DATA_53", 54, opcodePushData),
+    Opcode(OP_DATA_54, "OP_DATA_54", 55, opcodePushData),
+    Opcode(OP_DATA_55, "OP_DATA_55", 56, opcodePushData),
+    Opcode(OP_DATA_56, "OP_DATA_56", 57, opcodePushData),
+    Opcode(OP_DATA_57, "OP_DATA_57", 58, opcodePushData),
+    Opcode(OP_DATA_58, "OP_DATA_58", 59, opcodePushData),
+    Opcode(OP_DATA_59, "OP_DATA_59", 60, opcodePushData),
+    Opcode(OP_DATA_60, "OP_DATA_60", 61, opcodePushData),
+    Opcode(OP_DATA_61, "OP_DATA_61", 62, opcodePushData),
+    Opcode(OP_DATA_62, "OP_DATA_62", 63, opcodePushData),
+    Opcode(OP_DATA_63, "OP_DATA_63", 64, opcodePushData),
+    Opcode(OP_DATA_64, "OP_DATA_64", 65, opcodePushData),
+    Opcode(OP_DATA_65, "OP_DATA_65", 66, opcodePushData),
+    Opcode(OP_DATA_66, "OP_DATA_66", 67, opcodePushData),
+    Opcode(OP_DATA_67, "OP_DATA_67", 68, opcodePushData),
+    Opcode(OP_DATA_68, "OP_DATA_68", 69, opcodePushData),
+    Opcode(OP_DATA_69, "OP_DATA_69", 70, opcodePushData),
+    Opcode(OP_DATA_70, "OP_DATA_70", 71, opcodePushData),
+    Opcode(OP_DATA_71, "OP_DATA_71", 72, opcodePushData),
+    Opcode(OP_DATA_72, "OP_DATA_72", 73, opcodePushData),
+    Opcode(OP_DATA_73, "OP_DATA_73", 74, opcodePushData),
+    Opcode(OP_DATA_74, "OP_DATA_74", 75, opcodePushData),
+    Opcode(OP_DATA_75, "OP_DATA_75", 76, opcodePushData),
+    Opcode(OP_PUSHDATA1, "OP_PUSHDATA1", -1, opcodePushData),
+    Opcode(OP_PUSHDATA2, "OP_PUSHDATA2", -2, opcodePushData),
+    Opcode(OP_PUSHDATA4, "OP_PUSHDATA4", -4, opcodePushData),
+    Opcode(OP_1NEGATE, "OP_1NEGATE", 1, opcode1Negate),
+    Opcode(OP_RESERVED, "OP_RESERVED", 1, opcodeReserved),
+    Opcode(OP_TRUE, "OP_1", 1, opcodeN),
+    Opcode(OP_2, "OP_2", 1, opcodeN),
+    Opcode(OP_3, "OP_3", 1, opcodeN),
+    Opcode(OP_4, "OP_4", 1, opcodeN),
+    Opcode(OP_5, "OP_5", 1, opcodeN),
+    Opcode(OP_6, "OP_6", 1, opcodeN),
+    Opcode(OP_7, "OP_7", 1, opcodeN),
+    Opcode(OP_8, "OP_8", 1, opcodeN),
+    Opcode(OP_9, "OP_9", 1, opcodeN),
+    Opcode(OP_10, "OP_10", 1, opcodeN),
+    Opcode(OP_11, "OP_11", 1, opcodeN),
+    Opcode(OP_12, "OP_12", 1, opcodeN),
+    Opcode(OP_13, "OP_13", 1, opcodeN),
+    Opcode(OP_14, "OP_14", 1, opcodeN),
+    Opcode(OP_15, "OP_15", 1, opcodeN),
+    Opcode(OP_16, "OP_16", 1, opcodeN),
+
+    # Control opcodes.
+    Opcode(OP_NOP, "OP_NOP", 1, opcodeNop),
+    Opcode(OP_VER, "OP_VER", 1, opcodeReserved),
+    Opcode(OP_IF, "OP_IF", 1, opcodeIf),
+    Opcode(OP_NOTIF, "OP_NOTIF", 1, opcodeNotIf),
+    Opcode(OP_VERIF, "OP_VERIF", 1, opcodeReserved),
+    Opcode(OP_VERNOTIF, "OP_VERNOTIF", 1, opcodeReserved),
+    Opcode(OP_ELSE, "OP_ELSE", 1, opcodeElse),
+    Opcode(OP_ENDIF, "OP_ENDIF", 1, opcodeEndif),
+    Opcode(OP_VERIFY, "OP_VERIFY", 1, opcodeVerify),
+    Opcode(OP_RETURN, "OP_RETURN", 1, opcodeReturn),
+
+    # Stack opcodes.
+    Opcode(OP_TOALTSTACK, "OP_TOALTSTACK", 1, opcodeToAltStack),
+    Opcode(OP_FROMALTSTACK, "OP_FROMALTSTACK", 1, opcodeFromAltStack),
+    Opcode(OP_2DROP, "OP_2DROP", 1, opcode2Drop),
+    Opcode(OP_2DUP, "OP_2DUP", 1, opcode2Dup),
+    Opcode(OP_3DUP, "OP_3DUP", 1, opcode3Dup),
+    Opcode(OP_2OVER, "OP_2OVER", 1, opcode2Over),
+    Opcode(OP_2ROT, "OP_2ROT", 1, opcode2Rot),
+    Opcode(OP_2SWAP, "OP_2SWAP", 1, opcode2Swap),
+    Opcode(OP_IFDUP, "OP_IFDUP", 1, opcodeIfDup),
+    Opcode(OP_DEPTH, "OP_DEPTH", 1, opcodeDepth),
+    Opcode(OP_DROP, "OP_DROP", 1, opcodeDrop),
+    Opcode(OP_DUP, "OP_DUP", 1, opcodeDup),
+    Opcode(OP_NIP, "OP_NIP", 1, opcodeNip),
+    Opcode(OP_OVER, "OP_OVER", 1, opcodeOver),
+    Opcode(OP_PICK, "OP_PICK", 1, opcodePick),
+    Opcode(OP_ROLL, "OP_ROLL", 1, opcodeRoll),
+    Opcode(OP_ROT, "OP_ROT", 1, opcodeRot),
+    Opcode(OP_SWAP, "OP_SWAP", 1, opcodeSwap),
+    Opcode(OP_TUCK, "OP_TUCK", 1, opcodeTuck),
+
+    # Splice opcodes.
+    Opcode(OP_CAT, "OP_CAT", 1, opcodeCat),
+    Opcode(OP_SUBSTR, "OP_SUBSTR", 1, opcodeSubstr),
+    Opcode(OP_LEFT, "OP_LEFT", 1, opcodeLeft),
+    Opcode(OP_RIGHT, "OP_RIGHT", 1, opcodeRight),
+    Opcode(OP_SIZE, "OP_SIZE", 1, opcodeSize),
+
+    # Bitwise logic opcodes for int32 registers derived from the stack.
+    Opcode(OP_INVERT, "OP_INVERT", 1, opcodeInvert),
+    Opcode(OP_AND, "OP_AND", 1, opcodeAnd),
+    Opcode(OP_OR, "OP_OR", 1, opcodeOr),
+    Opcode(OP_XOR, "OP_XOR", 1, opcodeXor),
+
+    # Bytewise comparison function opcodes for byte strings.
+    Opcode(OP_EQUAL, "OP_EQUAL", 1, opcodeEqual),
+    Opcode(OP_EQUALVERIFY, "OP_EQUALVERIFY", 1, opcodeEqualVerify),
+
+    # Bitwise rotation opcodes for an int32 register derived from the stack.
+    Opcode(OP_ROTR, "OP_ROTR", 1, opcodeRotr),
+    Opcode(OP_ROTL, "OP_ROTL", 1, opcodeRotl),
+
+    # Numeric related opcodes.
+    Opcode(OP_1ADD, "OP_1ADD", 1, opcode1Add),
+    Opcode(OP_1SUB, "OP_1SUB", 1, opcode1Sub),
+    Opcode(OP_2MUL, "OP_2MUL", 1, opcodeNop),
+    Opcode(OP_2DIV, "OP_2DIV", 1, opcodeNop),
+    Opcode(OP_NEGATE, "OP_NEGATE", 1, opcodeNegate),
+    Opcode(OP_ABS, "OP_ABS", 1, opcodeAbs),
+    Opcode(OP_NOT, "OP_NOT", 1, opcodeNot),
+    Opcode(OP_0NOTEQUAL, "OP_0NOTEQUAL", 1, opcode0NotEqual),
+    Opcode(OP_ADD, "OP_ADD", 1, opcodeAdd),
+    Opcode(OP_SUB, "OP_SUB", 1, opcodeSub),
+    Opcode(OP_MUL, "OP_MUL", 1, opcodeMul),
+    Opcode(OP_DIV, "OP_DIV", 1, opcodeDiv),
+    Opcode(OP_MOD, "OP_MOD", 1, opcodeMod),
+    Opcode(OP_LSHIFT, "OP_LSHIFT", 1, opcodeLShift),
+    Opcode(OP_RSHIFT, "OP_RSHIFT", 1, opcodeRShift),
+    Opcode(OP_BOOLAND, "OP_BOOLAND", 1, opcodeBoolAnd),
+    Opcode(OP_BOOLOR, "OP_BOOLOR", 1, opcodeBoolOr),
+    Opcode(OP_NUMEQUAL, "OP_NUMEQUAL", 1, opcodeNumEqual),
+    Opcode(OP_NUMEQUALVERIFY, "OP_NUMEQUALVERIFY", 1, opcodeNumEqualVerify),
+    Opcode(OP_NUMNOTEQUAL, "OP_NUMNOTEQUAL", 1, opcodeNumNotEqual),
+    Opcode(OP_LESSTHAN, "OP_LESSTHAN", 1, opcodeLessThan),
+    Opcode(OP_GREATERTHAN, "OP_GREATERTHAN", 1, opcodeGreaterThan),
+    Opcode(OP_LESSTHANOREQUAL, "OP_LESSTHANOREQUAL", 1, opcodeLessThanOrEqual),
+    Opcode(OP_GREATERTHANOREQUAL, "OP_GREATERTHANOREQUAL", 1, opcodeGreaterThanOrEqual),
+    Opcode(OP_MIN, "OP_MIN", 1, opcodeMin),
+    Opcode(OP_MAX, "OP_MAX", 1, opcodeMax),
+    Opcode(OP_WITHIN, "OP_WITHIN", 1, opcodeWithin),
+
+    # Crypto opcodes.
+    Opcode(OP_RIPEMD160, "OP_RIPEMD160", 1, opcodeRipemd160),
+    Opcode(OP_SHA1, "OP_SHA1", 1, opcodeSha1),
+    Opcode(OP_SHA256, "OP_SHA256", 1, opcodeSha256),
+    Opcode(OP_HASH160, "OP_HASH160", 1, opcodeHash160),
+    Opcode(OP_HASH256, "OP_HASH256", 1, opcodeHash256),
+    Opcode(OP_CODESEPARATOR, "OP_CODESEPARATOR", 1, opcodeDisabled), # Disabled
+    Opcode(OP_CHECKSIG, "OP_CHECKSIG", 1, opcodeCheckSig),
+    Opcode(OP_CHECKSIGVERIFY, "OP_CHECKSIGVERIFY", 1, opcodeCheckSigVerify),
+    Opcode(OP_CHECKMULTISIG, "OP_CHECKMULTISIG", 1, opcodeCheckMultiSig),
+    Opcode(OP_CHECKMULTISIGVERIFY, "OP_CHECKMULTISIGVERIFY", 1, opcodeCheckMultiSigVerify),
+
+    # Reserved opcodes.
+    Opcode(OP_NOP1, "OP_NOP1", 1, opcodeNop),
+    Opcode(OP_CHECKLOCKTIMEVERIFY, "OP_CHECKLOCKTIMEVERIFY", 1, opcodeCheckLockTimeVerify),
+    Opcode(OP_NOP3, "OP_NOP3", 1, opcodeNop),
+    Opcode(OP_NOP4, "OP_NOP4", 1, opcodeNop),
+    Opcode(OP_NOP5, "OP_NOP5", 1, opcodeNop),
+    Opcode(OP_NOP6, "OP_NOP6", 1, opcodeNop),
+    Opcode(OP_NOP7, "OP_NOP7", 1, opcodeNop),
+    Opcode(OP_NOP8, "OP_NOP8", 1, opcodeNop),
+    Opcode(OP_NOP9, "OP_NOP9", 1, opcodeNop),
+    Opcode(OP_NOP10, "OP_NOP10", 1, opcodeNop),
+
+    # SS* opcodes.
+    Opcode(OP_SSTX, "OP_SSTX", 1, opcodeNop),
+    Opcode(OP_SSGEN, "OP_SSGEN", 1, opcodeNop),
+    Opcode(OP_SSRTX, "OP_SSRTX", 1, opcodeNop),
+    Opcode(OP_SSTXCHANGE, "OP_SSTXCHANGE", 1, opcodeNop),
+
+    # Alternative checksig opcode.
+    Opcode(OP_CHECKSIGALT, "OP_CHECKSIGALT", 1, opcodeCheckSigAlt),
+    Opcode(OP_CHECKSIGALTVERIFY, "OP_CHECKSIGALTVERIFY", 1, opcodeCheckSigAltVerify),
+
+    # Undefined opcodes.
+    Opcode(OP_UNKNOWN192, "OP_UNKNOWN192", 1, opcodeNop),
+    Opcode(OP_UNKNOWN193, "OP_UNKNOWN193", 1, opcodeNop),
+    Opcode(OP_UNKNOWN194, "OP_UNKNOWN194", 1, opcodeNop),
+    Opcode(OP_UNKNOWN195, "OP_UNKNOWN195", 1, opcodeNop),
+    Opcode(OP_UNKNOWN196, "OP_UNKNOWN196", 1, opcodeNop),
+    Opcode(OP_UNKNOWN197, "OP_UNKNOWN197", 1, opcodeNop),
+    Opcode(OP_UNKNOWN198, "OP_UNKNOWN198", 1, opcodeNop),
+    Opcode(OP_UNKNOWN199, "OP_UNKNOWN199", 1, opcodeNop),
+    Opcode(OP_UNKNOWN200, "OP_UNKNOWN200", 1, opcodeNop),
+    Opcode(OP_UNKNOWN201, "OP_UNKNOWN201", 1, opcodeNop),
+    Opcode(OP_UNKNOWN202, "OP_UNKNOWN202", 1, opcodeNop),
+    Opcode(OP_UNKNOWN203, "OP_UNKNOWN203", 1, opcodeNop),
+    Opcode(OP_UNKNOWN204, "OP_UNKNOWN204", 1, opcodeNop),
+    Opcode(OP_UNKNOWN205, "OP_UNKNOWN205", 1, opcodeNop),
+    Opcode(OP_UNKNOWN206, "OP_UNKNOWN206", 1, opcodeNop),
+    Opcode(OP_UNKNOWN207, "OP_UNKNOWN207", 1, opcodeNop),
+    Opcode(OP_UNKNOWN208, "OP_UNKNOWN208", 1, opcodeNop),
+    Opcode(OP_UNKNOWN209, "OP_UNKNOWN209", 1, opcodeNop),
+    Opcode(OP_UNKNOWN210, "OP_UNKNOWN210", 1, opcodeNop),
+    Opcode(OP_UNKNOWN211, "OP_UNKNOWN211", 1, opcodeNop),
+    Opcode(OP_UNKNOWN212, "OP_UNKNOWN212", 1, opcodeNop),
+    Opcode(OP_UNKNOWN213, "OP_UNKNOWN213", 1, opcodeNop),
+    Opcode(OP_UNKNOWN214, "OP_UNKNOWN214", 1, opcodeNop),
+    Opcode(OP_UNKNOWN215, "OP_UNKNOWN215", 1, opcodeNop),
+    Opcode(OP_UNKNOWN216, "OP_UNKNOWN216", 1, opcodeNop),
+    Opcode(OP_UNKNOWN217, "OP_UNKNOWN217", 1, opcodeNop),
+    Opcode(OP_UNKNOWN218, "OP_UNKNOWN218", 1, opcodeNop),
+    Opcode(OP_UNKNOWN219, "OP_UNKNOWN219", 1, opcodeNop),
+    Opcode(OP_UNKNOWN220, "OP_UNKNOWN220", 1, opcodeNop),
+    Opcode(OP_UNKNOWN221, "OP_UNKNOWN221", 1, opcodeNop),
+    Opcode(OP_UNKNOWN222, "OP_UNKNOWN222", 1, opcodeNop),
+    Opcode(OP_UNKNOWN223, "OP_UNKNOWN223", 1, opcodeNop),
+    Opcode(OP_UNKNOWN224, "OP_UNKNOWN224", 1, opcodeNop),
+    Opcode(OP_UNKNOWN225, "OP_UNKNOWN225", 1, opcodeNop),
+    Opcode(OP_UNKNOWN226, "OP_UNKNOWN226", 1, opcodeNop),
+    Opcode(OP_UNKNOWN227, "OP_UNKNOWN227", 1, opcodeNop),
+    Opcode(OP_UNKNOWN228, "OP_UNKNOWN228", 1, opcodeNop),
+    Opcode(OP_UNKNOWN229, "OP_UNKNOWN229", 1, opcodeNop),
+    Opcode(OP_UNKNOWN230, "OP_UNKNOWN230", 1, opcodeNop),
+    Opcode(OP_UNKNOWN231, "OP_UNKNOWN231", 1, opcodeNop),
+    Opcode(OP_UNKNOWN232, "OP_UNKNOWN232", 1, opcodeNop),
+    Opcode(OP_UNKNOWN233, "OP_UNKNOWN233", 1, opcodeNop),
+    Opcode(OP_UNKNOWN234, "OP_UNKNOWN234", 1, opcodeNop),
+    Opcode(OP_UNKNOWN235, "OP_UNKNOWN235", 1, opcodeNop),
+    Opcode(OP_UNKNOWN236, "OP_UNKNOWN236", 1, opcodeNop),
+    Opcode(OP_UNKNOWN237, "OP_UNKNOWN237", 1, opcodeNop),
+    Opcode(OP_UNKNOWN238, "OP_UNKNOWN238", 1, opcodeNop),
+    Opcode(OP_UNKNOWN239, "OP_UNKNOWN239", 1, opcodeNop),
+    Opcode(OP_UNKNOWN240, "OP_UNKNOWN240", 1, opcodeNop),
+    Opcode(OP_UNKNOWN241, "OP_UNKNOWN241", 1, opcodeNop),
+    Opcode(OP_UNKNOWN242, "OP_UNKNOWN242", 1, opcodeNop),
+    Opcode(OP_UNKNOWN243, "OP_UNKNOWN243", 1, opcodeNop),
+    Opcode(OP_UNKNOWN244, "OP_UNKNOWN244", 1, opcodeNop),
+    Opcode(OP_UNKNOWN245, "OP_UNKNOWN245", 1, opcodeNop),
+    Opcode(OP_UNKNOWN246, "OP_UNKNOWN246", 1, opcodeNop),
+    Opcode(OP_UNKNOWN247, "OP_UNKNOWN247", 1, opcodeNop),
+    Opcode(OP_UNKNOWN248, "OP_UNKNOWN248", 1, opcodeNop),
+
+    # Bitcoin Core internal use opcode.  Defined here for completeness.
+    Opcode(OP_SMALLDATA, "OP_SMALLDATA", 1, opcodeInvalid),
+    Opcode(OP_SMALLINTEGER, "OP_SMALLINTEGER", 1, opcodeInvalid),
+    Opcode(OP_PUBKEYS, "OP_PUBKEYS", 1, opcodeInvalid),
+    Opcode(OP_UNKNOWN252, "OP_UNKNOWN252", 1, opcodeInvalid),
+    Opcode(OP_PUBKEYHASH, "OP_PUBKEYHASH", 1, opcodeInvalid),
+    Opcode(OP_PUBKEY, "OP_PUBKEY", 1, opcodeInvalid),
+
+    Opcode(OP_INVALIDOPCODE, "OP_INVALIDOPCODE", 1, opcodeInvalid),
+]
+
+# opcodeOnelineRepls defines opcode names which are replaced when doing a
+# one-line disassembly.  This is done to match the output of the reference
+# implementation while not changing the opcode names in the nicer full
+# disassembly.
+opcodeOnelineRepls = {
+    "OP_1NEGATE": "-1",
+    "OP_0":       "0",
+    "OP_1":       "1",
+    "OP_2":       "2",
+    "OP_3":       "3",
+    "OP_4":       "4",
+    "OP_5":       "5",
+    "OP_6":       "6",
+    "OP_7":       "7",
+    "OP_8":       "8",
+    "OP_9":       "9",
+    "OP_10":      "10",
+    "OP_11":      "11",
+    "OP_12":      "12",
+    "OP_13":      "13",
+    "OP_14":      "14",
+    "OP_15":      "15",
+    "OP_16":      "16",
+}
 
 OpcodeByName = {}
 for op in opcodeArray:
