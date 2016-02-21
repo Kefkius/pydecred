@@ -12,6 +12,7 @@ from decred.core.key import ECTypeSecp256k1, ECTypeEdwards, ECTypeSecSchnorr
 from decred.core.serialize import DecredHash, Hash160
 from .scriptnum import StackMinimalDataError, script_num, math_op_code_max_script_num_len, int_32
 from .errors import *
+from .constants import MaxScriptElementSize
 
 _bchr = chr
 _bord = ord
@@ -402,7 +403,7 @@ class ParsedOpcode(object):
         ret_bytes = b''
 
         # ret_bytes[0]
-        ret_bytes += self.opcode.value
+        ret_bytes += _bchr(self.opcode.value)
 
         if self.opcode.length == 1:
             if len(self.data) != 0:
@@ -801,7 +802,7 @@ def opcodeCat(op, vm):
         vm.dstack.push_bytearray(b'')
 
     # Don't overflow the maximum stack size.
-    if len(a) + len(b) > max_script_element_size:
+    if len(a) + len(b) > MaxScriptElementSize:
         raise StackElementTooBigError()
 
     c = b + a
@@ -888,7 +889,7 @@ def opcodeRight(op, vm):
     if v0_recast == a_len:
         vm.dstack.push_bytearray(b'')
         return
-    vm.dstack.push_bytearray(a[v0_recase:])
+    vm.dstack.push_bytearray(a[v0_recast:])
 
 # opcodeSize pushes the size of the top item of the data stack onto the data
 # stack.
