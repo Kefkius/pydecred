@@ -221,3 +221,6 @@ class ScriptBuilder(object):
             raise self.err
         return self._makeScript(), self.err
 
+    def get_script(self):
+        s, _ = self.Script(raise_on_error=True)
+        return s

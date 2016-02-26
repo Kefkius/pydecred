@@ -162,7 +162,7 @@ class Engine(object):
         elif self.dstack.depth() < 1:
             raise StackEmptyStackError()
 
-        v = self.dstack.pop_bool()
+        v = self.dstack.peek_bool(0)
         if not v:
             raise StackScriptFailedError()
 
