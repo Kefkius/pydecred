@@ -6,6 +6,7 @@ from bitcoin.core import x, b2x
 from decred.core.script.engine import *
 from decred.core.script.opcode import *
 from decred.core.script.errors import *
+from decred.core.script.scriptbuilder import ScriptBuilder
 from decred.core.script.standard import StandardVerifyFlags
 from decred.core.transaction import *
 
@@ -327,4 +328,76 @@ class EngineTest(unittest.TestCase):
             self.assertEqual(disasm, vm.disasm_pc())
             vm.step()
             self.assertEqual(step_stack, vm.get_stack())
+
+    def test_arithmetic(self):
+        tx = Transaction(txins=(TxIn(),))
+        builder = ScriptBuilder()
+
+        tests = [
+            ('multiplication',
+            lambda b: b.AddInt64(64).AddOp(OP_2).AddOp(OP_MUL).get_script(),
+            128,
+            ),
+            ('division',
+            lambda b: b.AddInt64(100).AddInt64(50).AddOp(OP_DIV).get_script(),
+            2,
+            ),
+            ('addition',
+            lambda b: b.AddInt64(100).AddOp(OP_1).AddOp(OP_ADD).get_script(),
+            101,
+            ),
+            ('addition 2',
+            lambda b: b.AddData(b'').AddOp(OP_2).AddOp(OP_ADD).get_script(),
+            2,
+            ),
+            ('subtraction',
+            lambda b: b.AddInt64(100).AddOp(OP_1).AddOp(OP_SUB).get_script(),
+            99,
+            )
+        ]
+
+        for name, func, expected in tests:
+            builder.Reset()
+            s = func(builder)
+            vm = Engine(s, tx, 0, StandardVerifyFlags, 0)
+            vm.execute()
+            self.assertEqual(expected, vm.dstack.peek_int(0), '%s: expected %d, got %d' % (name, expected, vm.dstack.peek_int(0)))
+
+    def test_bitwise_operations(self):
+        tx = Transaction(txins=(TxIn(),))
+        builder = ScriptBuilder()
+
+        tests = [
+            ('left shift',
+            lambda b: b.AddOp(OP_1).AddOp(OP_8).AddOp(OP_LSHIFT).get_script(),
+            256,
+            ),
+            ('right shift',
+            lambda b: b.AddInt64(256).AddOp(OP_8).AddOp(OP_RSHIFT).get_script(),
+            1,
+            ),
+            ('invert',
+            lambda b: b.AddOp(OP_12).AddOp(OP_INVERT).get_script(),
+            -13,
+            ),
+            ('and',
+            lambda b: b.AddOp(OP_12).AddOp(OP_10).AddOp(OP_AND).get_script(),
+            8,
+            ),
+            ('or',
+            lambda b: b.AddOp(OP_12).AddOp(OP_10).AddOp(OP_OR).get_script(),
+            14,
+            ),
+            ('xor',
+            lambda b: b.AddOp(OP_12).AddOp(OP_10).AddOp(OP_XOR).get_script(),
+            6,
+            )
+        ]
+
+        for name, func, expected in tests:
+            builder.Reset()
+            s = func(builder)
+            vm = Engine(s, tx, 0, StandardVerifyFlags, 0)
+            vm.execute()
+            self.assertEqual(expected, vm.dstack.peek_int(0), '%s: expected %d, got %d' % (name, expected, vm.dstack.peek_int(0)))
 
